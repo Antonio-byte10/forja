@@ -36,19 +36,19 @@ export function ExerciseCard({ exercise, last, onChange, onToggle, onAddSet, onR
         <Text style={[s.col, s.check]}>feito</Text>
       </View>
       {sets.map((set, i) => (
-        <View key={i} style={[s.row, set.done && s.rowDone]}>
+        <View key={i} style={s.row}>
           <Text style={[s.setNum, s.num]}>{i + 1}</Text>
-          <View style={s.flex}>
-            <NumberInput label={`Carga série ${i + 1}`} value={set.weight} onChange={(weight) => onChange(i, { weight })} />
+          <View style={[s.flex, set.done && s.dim]}>
+            <NumberInput label={`${name}: carga série ${i + 1}`} value={set.weight} onChange={(weight) => onChange(i, { weight })} />
           </View>
-          <View style={s.flex}>
-            <NumberInput label={`Repetições série ${i + 1}`} value={set.reps} onChange={(reps) => onChange(i, { reps })} />
+          <View style={[s.flex, set.done && s.dim]}>
+            <NumberInput label={`${name}: repetições série ${i + 1}`} value={set.reps} onChange={(reps) => onChange(i, { reps })} />
           </View>
           <Pressable
             onPress={() => onToggle(i, !set.done)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: set.done }}
-            accessibilityLabel={`Série ${i + 1} feita`}
+            accessibilityLabel={`${name}: série ${i + 1} feita`}
             style={[s.checkBtn, set.done && s.checkOn]}
           >
             <Text style={[s.checkMark, set.done && { color: colors.onAccent }]}>✓</Text>
@@ -74,11 +74,11 @@ const s = StyleSheet.create({
   name: { color: colors.text, fontSize: 19, fontWeight: '800', flexShrink: 1 },
   badge: {
     color: colors.accent, fontSize: 11, fontWeight: '800', borderWidth: 1, borderColor: colors.accent,
-    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, letterSpacing: 0.5,
+    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, letterSpacing: 0.5, flexShrink: 0,
   },
   muted: { color: colors.muted, fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingVertical: 2 },
-  rowDone: { opacity: 0.55 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
+  dim: { opacity: 0.5 },
   col: { color: colors.muted, fontSize: 12, textAlign: 'center' },
   num: { width: 22 },
   flex: { flex: 1 },

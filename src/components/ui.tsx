@@ -71,9 +71,10 @@ export function Stepper({ value, onChange, min = 1, label }: { value: number; on
 
 export function ExerciseImage({ catalogKey, name, size }: { catalogKey?: string; name: string; size: number | '100%' }) {
   const source = catalogKey ? catalog[catalogKey]?.image : undefined;
-  const box = { width: size, height: size === '100%' ? 170 : size };
+  // Fotos do catálogo são 3:2.
+  const box = size === '100%' ? { width: size, aspectRatio: 1.5 } : { width: size, height: size };
   return source ? (
-    <Image source={source} resizeMode="contain" style={[s.image, box]} />
+    <Image source={source} resizeMode="cover" style={[s.image, box]} />
   ) : (
     <View style={[s.image, s.placeholder, box]}>
       <Text style={s.placeholderText}>{name.charAt(0).toUpperCase()}</Text>

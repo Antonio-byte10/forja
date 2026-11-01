@@ -8,6 +8,8 @@ import { formatKg, nextPlan, sessionVolume } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, radius } from '@/theme';
 
+const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 const daysAgo = (t: number) => {
   const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86_400_000);
   return days === 0 ? 'hoje' : days === 1 ? 'ontem' : `há ${days} dias`;
@@ -26,7 +28,7 @@ export default function Home() {
   return (
     <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.date}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+        <Text style={s.date}>{capitalize(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}</Text>
         <Text style={s.hello}>Bora treinar</Text>
 
         {active ? (
@@ -83,7 +85,7 @@ export default function Home() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 16, paddingBottom: 40 },
-  date: { color: colors.muted, fontSize: 14, textTransform: 'capitalize', marginTop: 8 },
+  date: { color: colors.muted, fontSize: 14, marginTop: 8 },
   hello: { color: colors.text, fontSize: 30, fontWeight: '900', marginTop: -10 },
   hero: { gap: 8, borderColor: colors.accent },
   kicker: { color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 },

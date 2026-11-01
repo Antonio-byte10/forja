@@ -9,12 +9,16 @@ import { uid } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, radius } from '@/theme';
 
+/** Primeira letra ainda não usada por outra ficha. */
+const freeLetter = (plans: Plan[]) =>
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((l) => !plans.some((p) => p.name === l)) ?? '?';
+
 export default function EditarFicha() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { plans, savePlan, deletePlan } = useStore();
   const saved = plans.find((p) => p.id === id);
   const [plan, setPlan] = useState<Plan>(
-    () => saved ?? { id: uid(), name: String.fromCharCode(65 + plans.length), title: '', exercises: [] },
+    () => saved ?? { id: uid(), name: freeLetter(plans), title: '', exercises: [] },
   );
   const [picking, setPicking] = useState(false);
 
@@ -92,7 +96,7 @@ export default function EditarFicha() {
               <Switch
                 value={ex.unilateral}
                 onValueChange={(unilateral) => patch(i, { unilateral })}
-                trackColor={{ true: colors.accent, false: colors.raised }}
+                trackColor={{ true: colors.accent, false: colors.border }}
                 thumbColor={colors.text}
               />
             </View>

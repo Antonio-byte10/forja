@@ -1,0 +1,7 @@
+{
+  "tool_name": "Grep",
+  "tool_input_preview": "{\"pattern\":\"'src/app'|\\\"src/app\\\"|src[/\\\\\\\\\\\\\\\\]app\",\"path\":\"D:\\\\app_mobile\\\\node_modules\\\\@expo\\\\cli\\\\build\\\\src\\\\start\\\\server\\\\metro\",\"output_mode\":\"content\",\"head_limit\":10}",
+  "error": "Path does not exist: D:\\app_mobile\\node_modules\\@expo\\cli\\build\\src\\start\\server\\metro. Note: your current working directory is D:\\app_mobile.",
+  "timestamp": "2026-11-01T22:58:57.543Z",
+  "retry_count": 2
+}

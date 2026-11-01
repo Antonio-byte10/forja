@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { defaultPlans } from '@/data/defaults';
@@ -55,11 +55,5 @@ export const useStore = create<Store>()(
 );
 
 /** Espera os dados salvos carregarem antes de mostrar as telas. */
-export const useHydrated = () => {
-  const [hydrated, setHydrated] = useState(useStore.persist.hasHydrated());
-  useEffect(() => {
-    setHydrated(useStore.persist.hasHydrated());
-    return useStore.persist.onFinishHydration(() => setHydrated(true));
-  }, []);
-  return hydrated;
-};
+export const useHydrated = () =>
+  useSyncExternalStore(useStore.persist.onFinishHydration, useStore.persist.hasHydrated);

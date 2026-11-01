@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View, type ViewProps } from 'react-native';
 import { catalog } from '@/data/catalog';
 import { parseNumber } from '@/lib/workout';
@@ -34,9 +34,12 @@ const show = (n: number) => (n ? String(n).replace('.', ',') : '');
 /** Campo numérico que aceita vírgula e não perde o que está sendo digitado. */
 export function NumberInput({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
   const [text, setText] = useState(show(value));
-  useEffect(() => {
-    setText((t) => (parseNumber(t) === value ? t : show(value)));
-  }, [value]);
+  const [synced, setSynced] = useState(value);
+  // Valor mudou por fora (ex.: nova série): atualiza o texto sem apagar "42," enquanto digita.
+  if (value !== synced) {
+    setSynced(value);
+    if (parseNumber(text) !== value) setText(show(value));
+  }
   return (
     <TextInput
       value={text}

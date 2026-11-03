@@ -15,15 +15,24 @@ npm run typecheck
 
 ## Gerar o APK
 
-Precisa de uma conta grátis em https://expo.dev.
+Tudo roda neste computador, sem conta e sem nuvem:
 
 ```bash
-npx eas-cli@latest login
 npm run build:apk
 ```
 
-O build roda na nuvem da Expo e termina com um link para baixar o `.apk`. No celular, permita
-"instalar apps de fontes desconhecidas" para instalar.
+O APK sai em `dist/treino-<versão>.apk`. Mande para o celular (WhatsApp, Drive, cabo), toque nele e
+permita "instalar apps de fontes desconhecidas" na primeira vez.
+
+O script usa as ferramentas em `D:ndroid` (ou na pasta de `TREINO_ANDROID_DIR`):
+
+- `jdk21/` — Java 21 (Eclipse Temurin)
+- `sdk/` — Android SDK: plataforma 37, build-tools 37.0.0, NDK 27.1 e CMake 3.22.1
+- `gradle/` — cache do Gradle
+- `keys/` — chave de assinatura do app e a senha dela. **Guarde uma cópia**: sem ela, uma versão
+  nova não instala por cima da antiga, e reinstalar apaga os dados do app.
+
+Para lançar uma versão nova, aumente `expo.version` e `expo.android.versionCode` no `app.json`.
 
 ## Estrutura
 

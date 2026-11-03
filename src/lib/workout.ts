@@ -89,6 +89,12 @@ export const dayKey = (t: number | Date) => {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
+/** "hoje", "ontem" ou "há N dias", contando dias do calendário. */
+export const daysAgo = (t: number, now = Date.now()) => {
+  const days = Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86_400_000);
+  return days <= 0 ? 'hoje' : days === 1 ? 'ontem' : `há ${days} dias`;
+};
+
 /** Variação (%) do volume em relação ao treino anterior da mesma ficha; `undefined` se não houver base. */
 export const volumeChange = (history: Session[], session: Session): number | undefined => {
   const i = history.findIndex((s) => s.id === session.id);

@@ -1,15 +1,15 @@
-import { Redirect, router, Stack } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCard } from '@/components/ExerciseCard';
-import { RestTimer } from '@/components/RestTimer';
-import { Button } from '@/components/ui';
+import { RestTimer, type Rest } from '@/components/RestTimer';
+import { Button, ProgressBar, ScreenHeader, Txt } from '@/components/ui';
 import { confirm, useNow } from '@/lib/platform';
 import type { Session } from '@/lib/types';
 import { countSets, exerciseKey, formatClock, formatKg, lastSets, sessionVolume } from '@/lib/workout';
 import { useStore } from '@/store';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
 
 const REST_MS = 90_000;
 
@@ -22,23 +22,24 @@ function Stats({ session }: { session: Session }) {
     ['Séries', `${done}/${total}`],
   ];
   return (
-    <View style={s.statsWrap}>
-      <View style={s.stats}>
+    <View style={s.stats}>
+      <View style={s.statRow}>
         {items.map(([label, value]) => (
           <View key={label} style={s.stat}>
-            <Text style={s.statValue}>{value}</Text>
-            <Text style={s.statLabel}>{label}</Text>
+            <Txt v="label">{label}</Txt>
+            <Txt v="num">{value}</Txt>
           </View>
         ))}
       </View>
+      <ProgressBar value={total ? done / total : 0} />
     </View>
   );
 }
 
 export default function Treino() {
   const { active, history, updateSet, addSet, removeSet, finish, discard } = useStore();
-  const [restEnd, setRestEnd] = useState<number>();
-  const onRest = useCallback((end?: number) => setRestEnd(end), []);
+  const [rest, setRest] = useState<Rest>();
+  const onRest = useCallback((r?: Rest) => setRest(r), []);
   const { bottom } = useSafeAreaInsets();
 
   if (!active) return <Redirect href="/" />;
@@ -66,9 +67,13 @@ export default function Treino() {
 
   return (
     <View style={s.screen}>
-      <Stack.Screen options={{ title: `Ficha ${active.planName} · ${active.planTitle}` }} />
+      <ScreenHeader
+        kicker={`Ficha ${active.planName}`}
+        title={active.planTitle || 'Treino'}
+        right={<Button small label="Finalizar" onPress={onFinish} />}
+      />
       <ScrollView
-        contentContainerStyle={[s.content, { paddingBottom: bottom + 120 }]}
+        contentContainerStyle={[s.content, { paddingBottom: bottom + (rest ? 150 : 32) }]}
         keyboardShouldPersistTaps="handled"
         stickyHeaderIndices={[0]}
       >
@@ -82,27 +87,25 @@ export default function Treino() {
             onChange={(set, patch) => updateSet(i, set, patch)}
             onToggle={(set, done) => {
               updateSet(i, set, { done });
-              setRestEnd(done ? Date.now() + REST_MS : undefined);
+              setRest(done ? { end: Date.now() + REST_MS, total: REST_MS } : undefined);
             }}
             onAddSet={() => addSet(i)}
             onRemoveSet={() => removeSet(i)}
           />
         ))}
-        <Button label="Finalizar treino" onPress={onFinish} />
-        <Button variant="danger" label="Descartar treino" onPress={onDiscard} />
+        {current === -1 && <Button label="Finalizar treino" icon="check" onPress={onFinish} />}
+        <Button variant="danger" icon="trash" label="Descartar treino" onPress={onDiscard} />
       </ScrollView>
-      <RestTimer endAt={restEnd} onChange={onRest} bottom={bottom + 12} />
+      <RestTimer rest={rest} onChange={onRest} bottom={bottom + 12} />
     </View>
   );
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, gap: 14 },
+  content: { paddingHorizontal: 16, gap: 12 },
   // Fixo no topo enquanto rola; o fundo evita que os cartões apareçam por trás.
-  statsWrap: { backgroundColor: colors.bg, paddingBottom: 4 },
-  stats: { flexDirection: 'row', gap: 8 },
-  stat: { flex: 1, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-  statValue: { color: colors.text, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  statLabel: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  stats: { backgroundColor: colors.bg, paddingBottom: 12, paddingTop: 4, gap: 12 },
+  statRow: { flexDirection: 'row' },
+  stat: { flex: 1, gap: 2 },
 });

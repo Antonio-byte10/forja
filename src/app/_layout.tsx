@@ -1,30 +1,31 @@
+import { Barlow_400Regular, Barlow_500Medium, Barlow_600SemiBold, Barlow_700Bold } from '@expo-google-fonts/barlow';
+import {
+  BarlowCondensed_600SemiBold, BarlowCondensed_700Bold, BarlowCondensed_800ExtraBold,
+} from '@expo-google-fonts/barlow-condensed';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 import { useHydrated } from '@/store';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
   const hydrated = useHydrated();
-  if (!hydrated) return null;
+  const [fontsLoaded, fontError] = useFonts({
+    Barlow_400Regular, Barlow_500Medium, Barlow_600SemiBold, Barlow_700Bold,
+    BarlowCondensed_600SemiBold, BarlowCondensed_700Bold, BarlowCondensed_800ExtraBold,
+  });
+  // Se a fonte falhar, segue com a do sistema em vez de travar numa tela vazia.
+  if (!hydrated || (!fontsLoaded && !fontError)) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   return (
     <>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '800' },
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.bg },
-        }}
-      >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="treino" options={{ title: 'Treino' }} />
-        <Stack.Screen name="historico" options={{ title: 'Histórico' }} />
-        <Stack.Screen name="fichas/index" options={{ title: 'Fichas' }} />
-        <Stack.Screen name="fichas/[id]" options={{ title: 'Editar ficha' }} />
-        <Stack.Screen name="backup" options={{ title: 'Backup' }} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="treino" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="ficha/[id]" />
+        <Stack.Screen name="backup" />
       </Stack>
     </>
   );

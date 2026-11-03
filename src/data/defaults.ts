@@ -15,13 +15,13 @@ const exercises = (planId: string, rows: Row[]): PlanExercise[] =>
     weight,
   }));
 
-/** Fichas de exemplo — editáveis no app. */
+/** Fichas de exemplo, curtas para treinar rápido: 5 exercícios e 16 séries cada. Editáveis no app. */
 export const defaultPlans: Plan[] = [
   {
     id: 'A', name: 'A', title: 'Peito e tríceps',
     exercises: exercises('A', [
-      ['supino_reto', 4, 10, 40], ['supino_inclinado_halter', 3, 10, 18], ['crucifixo', 3, 12, 12],
-      ['triceps_pulley', 3, 12, 25], ['triceps_testa', 3, 10, 20],
+      ['supino_reto', 4, 10, 40], ['supino_inclinado_halter', 3, 10, 18], ['crossover', 3, 12, 15],
+      ['triceps_corda', 3, 12, 20], ['triceps_frances_corda', 3, 12, 15],
     ]),
   },
   {
@@ -34,9 +34,8 @@ export const defaultPlans: Plan[] = [
   {
     id: 'C', name: 'C', title: 'Pernas e ombros',
     exercises: exercises('C', [
-      ['agachamento', 4, 8, 40], ['leg_press', 4, 12, 120], ['cadeira_extensora', 3, 12, 35],
-      ['mesa_flexora', 3, 12, 30], ['desenvolvimento', 3, 10, 14], ['elevacao_lateral', 3, 12, 8],
-      ['panturrilha', 4, 15, 40],
+      ['leg_press', 4, 12, 120], ['cadeira_extensora', 3, 12, 35], ['mesa_flexora', 3, 12, 30],
+      ['desenvolvimento', 3, 10, 14], ['elevacao_lateral', 3, 12, 8],
     ]),
   },
 ];

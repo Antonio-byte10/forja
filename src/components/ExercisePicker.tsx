@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { catalog } from '@/data/catalog';
+import { catalog, muscleGroups, type MuscleGroup } from '@/data/catalog';
 import type { PlanExercise } from '@/lib/types';
 import { uid } from '@/lib/workout';
 import { colors, fonts, radius } from '@/theme';
@@ -16,7 +16,8 @@ type Props = { visible: boolean; onClose: () => void; onPick: (exercise: PlanExe
 /** Escolhe um exercício do catálogo ou cria um com nome próprio. */
 export function ExercisePicker({ visible, onClose, onPick }: Props) {
   const [query, setQuery] = useState('');
-  const filtered = items.filter((i) => normalize(i.name).includes(normalize(query)));
+  const [group, setGroup] = useState<MuscleGroup>();
+  const filtered = items.filter((i) => (!group || i.group === group) && normalize(i.name).includes(normalize(query)));
   const typed = query.trim();
 
   const pick = (exercise: Omit<PlanExercise, 'id' | 'sets' | 'reps' | 'weight'>) => {
@@ -43,6 +44,22 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
             accessibilityLabel="Buscar exercício"
           />
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsBar} contentContainerStyle={s.chips}>
+          {[undefined, ...muscleGroups].map((g) => {
+            const on = g === group;
+            return (
+              <Pressable
+                key={g ?? 'todos'}
+                onPress={() => setGroup(g)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                style={({ pressed }) => [s.chip, on && s.chipOn, pressed && s.pressed]}
+              >
+                <Txt style={[s.chipText, on && { color: colors.onAccent }]}>{g ?? 'Todos'}</Txt>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
         <FlatList
           data={filtered}
           keyExtractor={(i) => i.key}
@@ -65,7 +82,11 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
               </Pressable>
             ) : undefined
           }
-          ListEmptyComponent={<Txt v="sub" style={{ textAlign: 'center', marginTop: 12 }}>Nada no catálogo com esse nome.</Txt>}
+          ListEmptyComponent={
+            <Txt v="sub" style={{ textAlign: 'center', marginTop: 12 }}>
+              {group ? `Nada em ${group} com esse nome.` : 'Nada no catálogo com esse nome.'}
+            </Txt>
+          }
           renderItem={({ item }) => (
             <Pressable
               onPress={() => pick({ name: item.name, catalogKey: item.key, unilateral: item.unilateral })}
@@ -75,7 +96,7 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
               <ExerciseImage catalogKey={item.key} name={item.name} size={48} />
               <View style={{ flex: 1 }}>
                 <Txt style={s.name}>{item.name}</Txt>
-                {item.unilateral && <Txt v="sub">Carga por lado</Txt>}
+                <Txt v="sub">{item.group}{item.unilateral ? ' · carga por lado' : ''}</Txt>
               </View>
               <Icon name="plus" size={20} color={colors.faint} />
             </Pressable>
@@ -90,11 +111,16 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: 12 },
   search: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, margin: 16, marginBottom: 4, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10, margin: 16, marginBottom: 0, paddingHorizontal: 14,
     backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, height: 50,
   },
   searchInput: { flex: 1, color: colors.text, fontFamily: fonts.medium, fontSize: 16, height: '100%' },
-  list: { gap: 8, padding: 16 },
+  chipsBar: { flexGrow: 0, flexShrink: 0, minHeight: 60 },
+  chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center' },
+  chip: { height: 36, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.surface, justifyContent: 'center' },
+  chipOn: { backgroundColor: colors.accent },
+  chipText: { fontFamily: fonts.semibold, fontSize: 14 },
+  list: { gap: 8, padding: 16, paddingTop: 4 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderRadius: radius.md, padding: 10, paddingRight: 14 },
   create: { borderWidth: 1, borderColor: colors.accent, borderStyle: 'dashed' },
   createIcon: { width: 72, height: 48, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },

@@ -30,7 +30,7 @@ O build roda na nuvem da Expo e termina com um link para baixar o `.apk`. No cel
 - `src/app/` — telas (Expo Router): início, treino, fichas, histórico, backup
 - `src/lib/workout.ts` — regras do treino (funções puras, testadas em `workout.test.ts`)
 - `src/store.ts` — estado salvo no aparelho (Zustand + AsyncStorage)
-- `src/data/` — catálogo de exercícios e fichas de exemplo
+- `src/data/` — catálogo com 155 exercícios em 10 grupos musculares e as fichas A/B/C de exemplo (5 exercícios cada)
 - `assets/exercises/` — fotos da [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (domínio público)
 
 Exercício **unilateral**: a carga digitada é por lado e o volume conta os dois lados (carga × reps × 2).

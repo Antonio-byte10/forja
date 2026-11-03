@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Plan, Session } from './types';
 import {
   addSet, countSets, formatClock, lastSets, nextPlan, parseBackup, parseNumber,
-  removeSet, sessionVolume, setVolume, startSession, updateSet,
+  removeSet, sessionVolume, setVolume, startSession, updateSet, volumeChange,
 } from './workout';
 
 const plan = (id: string, exercises: Plan['exercises'] = []): Plan => ({ id, name: id, title: '', exercises });
@@ -107,6 +107,41 @@ describe('utilitários', () => {
   it('parseBackup valida o formato', () => {
     expect(parseBackup('{"plans":[],"history":[]}')).toEqual({ plans: [], history: [] });
     expect(() => parseBackup('{"x":1}')).toThrow();
+    expect(() => parseBackup('[]')).toThrow();
     expect(() => parseBackup('não é json')).toThrow();
+  });
+
+  it('parseBackup completa campos faltando e ignora lixo', () => {
+    const { plans, history } = parseBackup(
+      JSON.stringify({
+        plans: [{ name: 'A', exercises: [{ name: 'Supino', sets: -2 }, 'lixo', null] }, 5],
+        history: [{ id: 'x', planId: 'A', exercises: [{ name: 'Supino', sets: [{ weight: 40, reps: 10, done: true }, {}] }] }],
+      }),
+    );
+    expect(plans).toHaveLength(1);
+    expect(plans[0].exercises).toHaveLength(1);
+    expect(plans[0].exercises[0]).toMatchObject({ name: 'Supino', sets: 3, reps: 10, weight: 0, unilateral: false });
+    expect(history[0].exercises[0].sets).toEqual([
+      { weight: 40, reps: 10, done: true },
+      { weight: 0, reps: 0, done: false },
+    ]);
+  });
+
+  it('parseBackup coloca o treino mais novo primeiro', () => {
+    const { history } = parseBackup(
+      JSON.stringify({ plans: [], history: [{ id: 'velho', startedAt: 1 }, { id: 'novo', startedAt: 9 }] }),
+    );
+    expect(history.map((s) => s.id)).toEqual(['novo', 'velho']);
+  });
+
+  it('volumeChange compara com o treino anterior da mesma ficha', () => {
+    const feito = (id: string, planId: string, weight: number): Session => ({
+      ...session(planId, [{ name: 'Supino', unilateral: false, sets: [{ weight, reps: 10, done: true }] }]),
+      id,
+    });
+    const history = [feito('c', 'A', 110), feito('b', 'B', 500), feito('a', 'A', 100)];
+    expect(volumeChange(history, history[0])).toBe(10);
+    expect(volumeChange(history, history[1])).toBeUndefined();
+    expect(volumeChange(history, history[2])).toBeUndefined();
   });
 });

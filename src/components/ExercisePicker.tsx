@@ -33,7 +33,7 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
             placeholder="Buscar exercício"
             placeholderTextColor={colors.muted}
             style={s.search}
-            autoFocus
+            accessibilityLabel="Buscar exercício"
           />
           <Button small variant="ghost" label="Fechar" onPress={onClose} />
         </View>
@@ -48,7 +48,7 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
             ) : undefined
           }
           renderItem={({ item }) => (
-            <Pressable style={s.item} onPress={() => pick({ name: item.name, catalogKey: item.key, unilateral: item.unilateral })}>
+            <Pressable style={({ pressed }) => [s.item, pressed && { opacity: 0.6 }]} accessibilityRole="button" onPress={() => pick({ name: item.name, catalogKey: item.key, unilateral: item.unilateral })}>
               <ExerciseImage catalogKey={item.key} name={item.name} size={52} />
               <Text style={s.name}>{item.name}</Text>
             </Pressable>

@@ -22,13 +22,15 @@ function Stats({ session }: { session: Session }) {
     ['Séries', `${done}/${total}`],
   ];
   return (
-    <View style={s.stats}>
-      {items.map(([label, value]) => (
-        <View key={label} style={s.stat}>
-          <Text style={s.statValue}>{value}</Text>
-          <Text style={s.statLabel}>{label}</Text>
-        </View>
-      ))}
+    <View style={s.statsWrap}>
+      <View style={s.stats}>
+        {items.map(([label, value]) => (
+          <View key={label} style={s.stat}>
+            <Text style={s.statValue}>{value}</Text>
+            <Text style={s.statLabel}>{label}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -41,11 +43,13 @@ export default function Treino() {
 
   if (!active) return <Redirect href="/" />;
 
+  const current = active.exercises.findIndex((e) => e.sets.some((x) => !x.done));
+
   const onFinish = async () => {
     const { done } = countSets(active);
     const ok = await confirm(
       'Finalizar treino?',
-      done ? `${done} séries · ${formatKg(sessionVolume(active))} kg de volume` : 'Nenhuma série marcada como feita.',
+      done ? `${done} séries · ${formatKg(sessionVolume(active))} kg de volume` : 'Nenhuma série marcada como feita: o treino não será salvo.',
       'Finalizar',
     );
     if (!ok) return;
@@ -63,13 +67,18 @@ export default function Treino() {
   return (
     <View style={s.screen}>
       <Stack.Screen options={{ title: `Ficha ${active.planName} · ${active.planTitle}` }} />
-      <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottom + 120 }]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[s.content, { paddingBottom: bottom + 120 }]}
+        keyboardShouldPersistTaps="handled"
+        stickyHeaderIndices={[0]}
+      >
         <Stats session={active} />
         {active.exercises.map((ex, i) => (
           <ExerciseCard
             key={i}
             exercise={ex}
             last={lastSets(history, exerciseKey(ex))}
+            current={i === current}
             onChange={(set, patch) => updateSet(i, set, patch)}
             onToggle={(set, done) => {
               updateSet(i, set, { done });
@@ -90,6 +99,8 @@ export default function Treino() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 14 },
+  // Fixo no topo enquanto rola; o fundo evita que os cartões apareçam por trás.
+  statsWrap: { backgroundColor: colors.bg, paddingBottom: 4 },
   stats: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   statValue: { color: colors.text, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },

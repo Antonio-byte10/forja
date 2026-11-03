@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MonthCalendar } from '@/components/MonthCalendar';
 import { Button, Card } from '@/components/ui';
 import type { Plan } from '@/lib/types';
-import { formatKg, nextPlan, sessionVolume } from '@/lib/workout';
+import { formatKg, nextPlan, sessionVolume, volumeChange } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, radius } from '@/theme';
 
@@ -19,6 +19,7 @@ export default function Home() {
   const { plans, history, active, start } = useStore();
   const next = nextPlan(plans, history);
   const last = history[0];
+  const change = last ? volumeChange(history, last) : undefined;
 
   const begin = (plan: Plan) => {
     start(plan.id);
@@ -46,10 +47,19 @@ export default function Home() {
             <Button label="Começar treino" onPress={() => begin(next)} disabled={!next.exercises.length} />
             {plans.length > 1 && (
               <View style={s.others}>
-                <Text style={s.muted}>Ou fazer outra:</Text>
+                <Text style={s.othersTitle}>OU FAZER OUTRA</Text>
                 {plans.filter((p) => p.id !== next.id).map((p) => (
-                  <Pressable key={p.id} style={s.chip} onPress={() => begin(p)} disabled={!p.exercises.length}>
-                    <Text style={s.chipText}>{p.name}</Text>
+                  <Pressable
+                    key={p.id}
+                    style={({ pressed }) => [s.other, pressed && s.pressed]}
+                    onPress={() => begin(p)}
+                    disabled={!p.exercises.length}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Começar ficha ${p.name}, ${p.title}`}
+                  >
+                    <Text style={s.otherLetter}>{p.name}</Text>
+                    <Text style={s.otherTitle} numberOfLines={1}>{p.title || 'Sem nome'}</Text>
+                    <Text style={s.otherGo}>›</Text>
                   </Pressable>
                 ))}
               </View>
@@ -65,6 +75,9 @@ export default function Home() {
         {last && (
           <Text style={s.last}>
             Último: Ficha {last.planName}, {daysAgo(last.startedAt)} · {formatKg(sessionVolume(last))} kg de volume
+            {change !== undefined && (
+              <Text style={change >= 0 ? s.up : s.down}>{`  ${change >= 0 ? '▲' : '▼'} ${Math.abs(change)}% vs. anterior`}</Text>
+            )}
           </Text>
         )}
 
@@ -72,7 +85,7 @@ export default function Home() {
 
         <View style={s.nav}>
           {([['Fichas', '/fichas'], ['Histórico', '/historico'], ['Backup', '/backup']] as const).map(([label, href]) => (
-            <Pressable key={href} style={s.navItem} onPress={() => router.push(href)}>
+            <Pressable key={href} style={({ pressed }) => [s.navItem, pressed && s.pressed]} onPress={() => router.push(href)} accessibilityRole="button">
               <Text style={s.navText}>{label}</Text>
             </Pressable>
           ))}
@@ -91,11 +104,17 @@ const s = StyleSheet.create({
   kicker: { color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   heroTitle: { color: colors.text, fontSize: 34, fontWeight: '900' },
   muted: { color: colors.muted, fontSize: 14, marginBottom: 6 },
-  others: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  chip: { backgroundColor: colors.raised, borderRadius: 10, width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
-  chipText: { color: colors.text, fontWeight: '800', fontSize: 16 },
-  last: { color: colors.muted, fontSize: 13, textAlign: 'center' },
+  pressed: { opacity: 0.6 },
+  others: { gap: 8, marginTop: 10 },
+  othersTitle: { color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  other: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.raised, borderRadius: 12, paddingHorizontal: 14, minHeight: 52 },
+  otherLetter: { color: colors.accent, fontSize: 20, fontWeight: '900', width: 24, textAlign: 'center' },
+  otherTitle: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1 },
+  otherGo: { color: colors.muted, fontSize: 22 },
+  last: { color: colors.muted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  up: { color: colors.accent, fontWeight: '700' },
+  down: { color: colors.muted, fontWeight: '700' },
   nav: { flexDirection: 'row', gap: 8 },
-  navItem: { flex: 1, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  navItem: { flex: 1, backgroundColor: colors.card, borderRadius: radius, minHeight: 52, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   navText: { color: colors.text, fontWeight: '700' },
 });

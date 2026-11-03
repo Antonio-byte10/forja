@@ -89,8 +89,57 @@ export const dayKey = (t: number | Date) => {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
-export const parseBackup = (text: string): Backup => {
-  const data = JSON.parse(text);
-  if (!Array.isArray(data?.plans) || !Array.isArray(data?.history)) throw new Error('Backup inválido');
-  return { plans: data.plans, history: data.history };
+/** Variação (%) do volume em relação ao treino anterior da mesma ficha; `undefined` se não houver base. */
+export const volumeChange = (history: Session[], session: Session): number | undefined => {
+  const i = history.findIndex((s) => s.id === session.id);
+  const previous = i < 0 ? undefined : history.slice(i + 1).find((s) => s.planId === session.planId);
+  const before = previous ? sessionVolume(previous) : 0;
+  return before > 0 ? Math.round((sessionVolume(session) / before - 1) * 100) : undefined;
+};
+
+type Raw = Record<string, unknown>;
+const isRaw = (v: unknown): v is Raw => typeof v === 'object' && v !== null && !Array.isArray(v);
+const rawList = (v: unknown): Raw[] => (Array.isArray(v) ? v.filter(isRaw) : []);
+const str = (v: unknown, fallback = '') => (typeof v === 'string' ? v : fallback);
+const count = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback);
+
+/** Um backup colado à mão pode estar incompleto: completa o que falta em vez de travar o app. */
+const cleanPlan = (p: Raw): Plan => ({
+  id: str(p.id) || uid(),
+  name: str(p.name, '?'),
+  title: str(p.title),
+  exercises: rawList(p.exercises).map((e) => ({
+    id: str(e.id) || uid(),
+    name: str(e.name, 'Exercício'),
+    catalogKey: typeof e.catalogKey === 'string' ? e.catalogKey : undefined,
+    sets: Math.round(count(e.sets, 3)),
+    reps: Math.round(count(e.reps, 10)),
+    weight: count(e.weight, 0),
+    unilateral: e.unilateral === true,
+  })),
+});
+
+const cleanSession = (s: Raw): Session => ({
+  id: str(s.id) || uid(),
+  planId: str(s.planId),
+  planName: str(s.planName, '?'),
+  planTitle: str(s.planTitle),
+  startedAt: count(s.startedAt, 0),
+  finishedAt: typeof s.finishedAt === 'number' ? s.finishedAt : undefined,
+  exercises: rawList(s.exercises).map((e) => ({
+    name: str(e.name, 'Exercício'),
+    catalogKey: typeof e.catalogKey === 'string' ? e.catalogKey : undefined,
+    unilateral: e.unilateral === true,
+    sets: rawList(e.sets).map((x) => ({ weight: count(x.weight, 0), reps: count(x.reps, 0), done: x.done === true })),
+  })),
+});
+
+export const parseBackup = (input: string): Backup => {
+  const data: unknown = JSON.parse(input);
+  if (!isRaw(data) || !Array.isArray(data.plans) || !Array.isArray(data.history)) throw new Error('Backup inválido');
+  return {
+    plans: rawList(data.plans).map(cleanPlan),
+    // Mais novo primeiro, como o app espera.
+    history: rawList(data.history).map(cleanSession).sort((a, b) => b.startedAt - a.startedAt),
+  };
 };

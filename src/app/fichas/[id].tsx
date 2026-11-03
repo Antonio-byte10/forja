@@ -46,7 +46,16 @@ export default function EditarFicha() {
 
   return (
     <>
-      <Stack.Screen options={{ title: saved ? `Ficha ${saved.name}` : 'Nova ficha' }} />
+      <Stack.Screen
+        options={{
+          title: saved ? `Ficha ${saved.name}` : 'Nova ficha',
+          headerRight: () => (
+            <Pressable onPress={save} accessibilityRole="button" style={({ pressed }) => [s.headerSave, pressed && s.off]}>
+              <Text style={s.headerSaveText}>Salvar</Text>
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.names}>
           <TextInput
@@ -69,15 +78,15 @@ export default function EditarFicha() {
         {plan.exercises.map((ex, i) => (
           <Card key={ex.id} style={s.card}>
             <View style={s.row}>
-              <ExerciseImage catalogKey={ex.catalogKey} name={ex.name} size={48} />
+              <ExerciseImage catalogKey={ex.catalogKey} name={ex.name} size={40} />
               <Text style={s.name}>{ex.name}</Text>
-              <Pressable onPress={() => move(i, i - 1)} disabled={i === 0} style={s.icon}>
+              <Pressable onPress={() => move(i, i - 1)} disabled={i === 0} style={s.icon} accessibilityRole="button" accessibilityLabel={`Subir ${ex.name}`}>
                 <Text style={[s.iconText, i === 0 && s.off]}>↑</Text>
               </Pressable>
-              <Pressable onPress={() => move(i, i + 1)} disabled={i === plan.exercises.length - 1} style={s.icon}>
+              <Pressable onPress={() => move(i, i + 1)} disabled={i === plan.exercises.length - 1} style={s.icon} accessibilityRole="button" accessibilityLabel={`Descer ${ex.name}`}>
                 <Text style={[s.iconText, i === plan.exercises.length - 1 && s.off]}>↓</Text>
               </Pressable>
-              <Pressable onPress={() => setExercises((list) => list.filter((e) => e.id !== ex.id))} style={s.icon}>
+              <Pressable onPress={() => setExercises((list) => list.filter((e) => e.id !== ex.id))} style={s.icon} accessibilityRole="button" accessibilityLabel={`Remover ${ex.name} da ficha`}>
                 <Text style={[s.iconText, { color: colors.danger }]}>✕</Text>
               </Pressable>
             </View>
@@ -88,7 +97,7 @@ export default function EditarFicha() {
             <View style={s.row}>
               <Text style={s.label}>{ex.unilateral ? 'Carga inicial (kg cada lado)' : 'Carga inicial (kg)'}</Text>
               <View style={{ width: 90 }}>
-                <NumberInput label="Carga inicial" value={ex.weight} onChange={(weight) => patch(i, { weight })} />
+                <NumberInput label={`${ex.name}: carga inicial`} value={ex.weight} onChange={(weight) => patch(i, { weight })} />
               </View>
             </View>
             <View style={s.row}>
@@ -120,7 +129,9 @@ const s = StyleSheet.create({
   card: { gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   name: { color: colors.text, fontWeight: '800', fontSize: 15, flex: 1 },
-  icon: { padding: 6 },
+  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerSave: { paddingHorizontal: 12, height: 44, justifyContent: 'center' },
+  headerSaveText: { color: colors.accent, fontWeight: '800', fontSize: 16 },
   iconText: { color: colors.text, fontSize: 18, fontWeight: '800' },
   off: { opacity: 0.25 },
   label: { color: colors.muted, fontSize: 14, flex: 1 },

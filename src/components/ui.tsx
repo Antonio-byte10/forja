@@ -32,7 +32,7 @@ export const Card = ({ style, ...props }: ViewProps) => <View style={[s.card, st
 const show = (n: number) => (n ? String(n).replace('.', ',') : '');
 
 /** Campo numérico que aceita vírgula e não perde o que está sendo digitado. */
-export function NumberInput({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
+export function NumberInput({ value, onChange, label, integer }: { value: number; onChange: (n: number) => void; label: string; integer?: boolean }) {
   const [text, setText] = useState(show(value));
   const [synced, setSynced] = useState(value);
   // Valor mudou por fora (ex.: nova série): atualiza o texto sem apagar "42," enquanto digita.
@@ -48,7 +48,7 @@ export function NumberInput({ value, onChange, label }: { value: number; onChang
         setText(t);
         onChange(parseNumber(t));
       }}
-      keyboardType="decimal-pad"
+      keyboardType={integer ? 'number-pad' : 'decimal-pad'}
       selectTextOnFocus
       placeholder="0"
       placeholderTextColor={colors.muted}
@@ -61,26 +61,31 @@ export function Stepper({ value, onChange, min = 1, label }: { value: number; on
   return (
     <View style={s.stepper}>
       <Text style={s.stepLabel}>{label}</Text>
-      <Pressable onPress={() => onChange(Math.max(min, value - 1))} style={s.stepBtn} accessibilityLabel={`Menos ${label}`}>
+      <Pressable onPress={() => onChange(Math.max(min, value - 1))} style={({ pressed }) => [s.stepBtn, pressed && s.dim]} accessibilityRole="button" accessibilityLabel={`Menos ${label}`}>
         <Text style={s.stepSign}>−</Text>
       </Pressable>
       <Text style={s.stepValue}>{value}</Text>
-      <Pressable onPress={() => onChange(value + 1)} style={s.stepBtn} accessibilityLabel={`Mais ${label}`}>
+      <Pressable onPress={() => onChange(value + 1)} style={({ pressed }) => [s.stepBtn, pressed && s.dim]} accessibilityRole="button" accessibilityLabel={`Mais ${label}`}>
         <Text style={s.stepSign}>+</Text>
       </Pressable>
     </View>
   );
 }
 
-export function ExerciseImage({ catalogKey, name, size }: { catalogKey?: string; name: string; size: number | '100%' }) {
+/** `size` é a altura (miniatura 3:2, sem cortar a foto), ou '100%' para a largura toda. `square` recorta no centro. */
+export function ExerciseImage({ catalogKey, name, size, square }: { catalogKey?: string; name: string; size: number | '100%'; square?: boolean }) {
   const source = catalogKey ? catalog[catalogKey]?.image : undefined;
-  // Fotos do catálogo são 3:2.
-  const box = size === '100%' ? { width: size, aspectRatio: 1.5 } : { width: size, height: size };
-  return source ? (
-    <Image source={source} resizeMode="cover" style={[s.image, box]} />
-  ) : (
-    <View style={[s.image, s.placeholder, box]}>
-      <Text style={s.placeholderText}>{name.charAt(0).toUpperCase()}</Text>
+  // Fotos do catálogo são 3:2. A proporção fica na caixa; a imagem só preenche.
+  const box = size === '100%' ? { width: '100%' as const, aspectRatio: 1.5 } : { width: square ? size : size * 1.5, height: size };
+  return (
+    <View style={[s.image, box]}>
+      {source ? (
+        <Image source={source} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityLabel={`Foto: ${name}`} />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, s.placeholder]}>
+          <Text style={s.placeholderText}>{name.charAt(0).toUpperCase()}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -100,10 +105,10 @@ const s = StyleSheet.create({
   },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stepLabel: { color: colors.muted, fontSize: 13, marginRight: 2 },
-  stepBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
+  stepBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
   stepSign: { color: colors.text, fontSize: 18, fontWeight: '700' },
   stepValue: { color: colors.text, fontSize: 16, fontWeight: '700', minWidth: 24, textAlign: 'center' },
-  image: { borderRadius: 10, backgroundColor: '#fff' },
+  image: { borderRadius: 10, backgroundColor: '#fff', overflow: 'hidden' },
   placeholder: { backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
   placeholderText: { color: colors.muted, fontSize: 22, fontWeight: '800' },
 });

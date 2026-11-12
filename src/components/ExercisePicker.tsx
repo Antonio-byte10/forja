@@ -3,13 +3,15 @@ import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { catalog, muscleGroups, type MuscleGroup } from '@/data/catalog';
 import type { PlanExercise } from '@/lib/types';
-import { uid } from '@/lib/workout';
+import { porTempo, uid } from '@/lib/workout';
 import { colors, fonts, radius } from '@/theme';
 import { Icon } from './Icon';
 import { ExerciseImage, IconButton, Txt } from './ui';
 
 const items = Object.entries(catalog).map(([key, item]) => ({ key, ...item }));
 const normalize = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+const ROTULO = { carga: 'carga', reps: 'peso do corpo', tempo: 'por tempo', cardio: 'tempo e distância', alongamento: 'por tempo' };
 
 type Props = { visible: boolean; onClose: () => void; onPick: (exercise: PlanExercise) => void };
 
@@ -20,8 +22,17 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
   const filtered = items.filter((i) => (!group || i.group === group) && normalize(i.name).includes(normalize(query)));
   const typed = query.trim();
 
-  const pick = (exercise: Omit<PlanExercise, 'id' | 'sets' | 'reps' | 'weight'>) => {
-    onPick({ id: uid(), sets: 3, reps: 10, weight: 0, ...exercise });
+  // Séries e metas iniciais dependem de como o exercício é medido.
+  const pick = ({ medida, ...exercise }: Pick<PlanExercise, 'name' | 'catalogKey' | 'unilateral' | 'medida'>) => {
+    const m = medida ?? 'carga';
+    onPick({
+      id: uid(), weight: 0,
+      sets: m === 'cardio' || m === 'alongamento' ? 1 : 3,
+      reps: porTempo(m) ? 0 : 10,
+      ...(porTempo(m) && { seconds: m === 'cardio' ? 1200 : 30 }),
+      ...(medida && { medida }),
+      ...exercise,
+    });
     setQuery('');
     onClose();
   };
@@ -89,14 +100,14 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
           }
           renderItem={({ item }) => (
             <Pressable
-              onPress={() => pick({ name: item.name, catalogKey: item.key, unilateral: item.unilateral })}
+              onPress={() => pick({ name: item.name, catalogKey: item.key, unilateral: item.unilateral, medida: item.medida })}
               accessibilityRole="button"
               style={({ pressed }) => [s.item, pressed && s.pressed]}
             >
               <ExerciseImage catalogKey={item.key} name={item.name} size={48} />
               <View style={{ flex: 1 }}>
                 <Txt style={s.name}>{item.name}</Txt>
-                <Txt v="sub">{item.group}{item.unilateral ? ' · carga por lado' : ''}</Txt>
+                <Txt v="sub">{item.group}{item.unilateral ? ' · carga por lado' : ''}{item.medida ? ` · ${ROTULO[item.medida]}` : ''}</Txt>
               </View>
               <Icon name="plus" size={20} color={colors.faint} />
             </Pressable>

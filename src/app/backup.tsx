@@ -12,7 +12,9 @@ import { colors, fonts, radius } from '@/theme';
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export default function Backup() {
-  const { plans, history, restore } = useStore();
+  const plans = useStore((st) => st.plans);
+  const history = useStore((st) => st.history);
+  const restore = useStore((st) => st.restore);
   const { bottom } = useSafeAreaInsets();
   const [text, setText] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();

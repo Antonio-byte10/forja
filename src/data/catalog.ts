@@ -1,12 +1,26 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { Medida } from '@/lib/types';
+import type { AnimKey } from './animacoes';
+import { catalogExtra } from './catalogExtra';
 
-export const muscleGroups = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Glúteos', 'Panturrilha', 'Abdômen', 'Antebraço'] as const;
+export const muscleGroups = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Glúteos', 'Panturrilha', 'Abdômen', 'Antebraço', 'Condicionamento', 'Cardio', 'Alongamento'] as const;
 export type MuscleGroup = (typeof muscleGroups)[number];
 
-export type CatalogItem = { name: string; group: MuscleGroup; image: ImageSourcePropType; unilateral: boolean };
+export type CatalogItem = {
+  name: string;
+  group: MuscleGroup;
+  unilateral: boolean;
+  /** Sem foto, o boneco (`anim`) faz o papel da imagem. */
+  image?: ImageSourcePropType;
+  /** Segunda fase do movimento: alternando com `image` vira uma mini animação. */
+  image2?: ImageSourcePropType;
+  /** Como se mede; sem o campo é carga × repetições. */
+  medida?: Medida;
+  anim?: AnimKey;
+};
 
 /** Fotos: free-exercise-db (domínio público). `unilateral`: a carga é por lado e o volume conta os dois. */
-export const catalog: Record<string, CatalogItem> = {
+const academia: Record<string, CatalogItem> = {
   // Peito
   supino_reto: { name: 'Supino reto', group: 'Peito', unilateral: false, image: require('../../assets/exercises/supino_reto.jpg') },
   supino_inclinado: { name: 'Supino inclinado', group: 'Peito', unilateral: false, image: require('../../assets/exercises/supino_inclinado.jpg') },
@@ -173,3 +187,25 @@ export const catalog: Record<string, CatalogItem> = {
   rosca_punho: { name: 'Rosca punho', group: 'Antebraço', unilateral: false, image: require('../../assets/exercises/rosca_punho.jpg') },
   rosca_punho_inversa: { name: 'Rosca punho invertida', group: 'Antebraço', unilateral: false, image: require('../../assets/exercises/rosca_punho_inversa.jpg') },
 };
+
+/** Exercícios que já existiam e são feitos só com o peso do corpo: mudam a medida e ganham o boneco. */
+const pesoDoCorpo: Record<string, Pick<CatalogItem, 'medida' | 'anim'>> = {
+  flexao: { medida: 'reps', anim: 'flexao' },
+  flexao_inclinada: { medida: 'reps', anim: 'flexao_inclinada_banco' },
+  flexao_pes_elevados: { medida: 'reps', anim: 'flexao_declinada' },
+  flexao_diamante: { medida: 'reps', anim: 'flexao_diamante' },
+  barra_fixa: { medida: 'reps' }, barra_supinada: { medida: 'reps' }, remada_invertida: { medida: 'reps' },
+  hiperextensao: { medida: 'reps' }, paralelas: { medida: 'reps' }, paralelas_peito: { medida: 'reps' },
+  mergulho_banco: { medida: 'reps' }, agachamento_livre_corpo: { medida: 'reps' }, gluteo_4_apoios: { medida: 'reps' },
+  ponte_unilateral: { medida: 'reps' }, abdominal_supra: { medida: 'reps' }, abdominal_obliquo: { medida: 'reps' },
+  elevacao_pernas_barra: { medida: 'reps' },
+  abdominal: { medida: 'reps', anim: 'abdominal' },
+  abdominal_infra: { medida: 'reps', anim: 'abdominal_infra' },
+  elevacao_pernas: { medida: 'reps', anim: 'elevacao_pernas' },
+  dead_bug: { medida: 'reps', anim: 'dead_bug' },
+  prancha: { medida: 'tempo', anim: 'prancha' },
+  prancha_lateral: { medida: 'tempo' },
+};
+
+export const catalog: Record<string, CatalogItem> = { ...academia, ...catalogExtra };
+for (const [key, extra] of Object.entries(pesoDoCorpo)) catalog[key] = { ...catalog[key], ...extra };

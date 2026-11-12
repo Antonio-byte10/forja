@@ -5,13 +5,15 @@ import { Icon } from '@/components/Icon';
 import { Button, Card, ExerciseImage, IconButton, ProgressBar, Txt } from '@/components/ui';
 import { WeekStrip } from '@/components/WeekStrip';
 import { useNow } from '@/lib/platform';
-import type { Plan, Session } from '@/lib/types';
-import { countSets, daysAgo, formatClock, formatKg, nextPlan, sessionVolume, volumeChange } from '@/lib/workout';
-import { useStore } from '@/store';
+import type { Plan, PlanExercise, Session } from '@/lib/types';
+import { countSets, daysAgo, formatClock, medidaDe, nextPlan, porTempo, resumo, volumeChange } from '@/lib/workout';
+import { useActive, useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
 
 const greeting = (h: number) => (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite');
 const plannedSets = (p: Plan) => p.exercises.reduce((n, e) => n + e.sets, 0);
+/** "3×12" ou, nos exercícios por tempo, "3×30 s". */
+const meta = (e: PlanExercise) => (porTempo(medidaDe(e)) ? `${e.sets}×${e.seconds ?? 0} s` : `${e.sets}×${e.reps}`);
 
 function Letter({ name, size = 64 }: { name: string; size?: number }) {
   return (
@@ -62,7 +64,7 @@ function NextCard({ plan, onStart }: { plan: Plan; onStart: () => void }) {
             <View key={e.id} style={s.previewRow}>
               <ExerciseImage catalogKey={e.catalogKey} name={e.name} size={28} />
               <Txt style={s.previewName} numberOfLines={1}>{e.name}</Txt>
-              <Txt v="sub">{e.sets}×{e.reps}</Txt>
+              <Txt v="sub">{meta(e)}</Txt>
             </View>
           ))}
           {more > 0 && <Txt v="sub">+ {more} {more === 1 ? 'exercício' : 'exercícios'}</Txt>}
@@ -74,7 +76,9 @@ function NextCard({ plan, onStart }: { plan: Plan; onStart: () => void }) {
 }
 
 export default function Home() {
-  const { plans, history, active, start } = useStore();
+  const plans = useStore((s) => s.plans);
+  const history = useStore((s) => s.history);
+  const { active, start, startFree } = useActive();
   const { top } = useSafeAreaInsets();
   const next = nextPlan(plans, history);
   const last = history[0];
@@ -86,6 +90,11 @@ export default function Home() {
     start(plan.id);
     router.push('/treino');
   };
+  const beginFree = () => {
+    startFree();
+    router.push('/treino');
+  };
+  const ultimo = last ? resumo(last) : undefined;
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: top + 16 }]}>
@@ -127,7 +136,7 @@ export default function Home() {
                 <Letter name={p.name} size={40} />
                 <Txt v="h2" numberOfLines={2} style={s.otherTitle}>{p.title || `Ficha ${p.name}`}</Txt>
                 <View style={s.otherFoot}>
-                  <Txt v="sub">{p.exercises.length} exercícios</Txt>
+                  <Txt v="sub">{p.lugar === 'casa' ? 'Em casa' : `${p.exercises.length} exercícios`}</Txt>
                   <Icon name="play" size={16} color={colors.accent} fill={colors.accent} />
                 </View>
               </Pressable>
@@ -136,7 +145,14 @@ export default function Home() {
         </View>
       )}
 
-      {last && (
+      {!active && (
+        <View style={s.actions}>
+          <Button small variant="secondary" icon="plus" label="Treino livre" onPress={beginFree} style={{ flex: 1 }} />
+          <Button small variant="secondary" icon="timer" label="Registrar atividade" onPress={() => router.push('/atividade')} style={{ flex: 1.3 }} />
+        </View>
+      )}
+
+      {last && ultimo && (
         <Pressable
           onPress={() => router.push('/historico')}
           accessibilityRole="button"
@@ -149,10 +165,10 @@ export default function Home() {
             </View>
             <View style={{ flex: 1 }}>
               <Txt v="label">Último treino</Txt>
-              <Txt v="h2">Ficha {last.planName} · {daysAgo(last.startedAt)}</Txt>
+              <Txt v="h2" numberOfLines={1}>{last.tipo === 'ficha' || !last.tipo ? `Ficha ${last.planName}` : last.planTitle} · {daysAgo(last.startedAt)}</Txt>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Txt v="num">{formatKg(sessionVolume(last))} kg</Txt>
+              <Txt v="num">{ultimo.valor} {ultimo.unidade}</Txt>
               {change !== undefined && (
                 <View style={s.trend}>
                   <Icon name={change >= 0 ? 'trendUp' : 'trendDown'} size={14} color={change >= 0 ? colors.up : colors.danger} />
@@ -182,6 +198,7 @@ const s = StyleSheet.create({
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   previewName: { flex: 1, fontFamily: fonts.medium },
   section: { gap: 10 },
+  actions: { flexDirection: 'row', gap: 10 },
   others: { gap: 10, paddingRight: 16 },
   other: { width: 156, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, gap: 10 },
   otherTitle: { minHeight: 48 },

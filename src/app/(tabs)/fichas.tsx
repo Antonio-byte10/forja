@@ -14,7 +14,7 @@ export default function Fichas() {
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: top + 16 }]}>
       <View style={s.head}>
         <Txt v="hero">Fichas</Txt>
-        <Txt v="sub">O app sugere a próxima na ordem. Toque numa ficha para editar.</Txt>
+        <Txt v="sub">O app sugere a próxima da academia na ordem; as de casa ficam à parte. Toque numa ficha para editar.</Txt>
       </View>
 
       {plans.map((plan) => {
@@ -34,7 +34,7 @@ export default function Fichas() {
               <View style={{ flex: 1 }}>
                 <Txt v="h2" numberOfLines={1}>{plan.title || 'Sem nome'}</Txt>
                 <Txt v="sub">
-                  {plan.exercises.length === 1 ? '1 exercício' : `${plan.exercises.length} exercícios`} · {sets} séries
+                  {plan.lugar === 'casa' ? 'Em casa · ' : ''}{plan.exercises.length === 1 ? '1 exercício' : `${plan.exercises.length} exercícios`} · {sets} séries
                 </Txt>
               </View>
               <Icon name="chevronRight" size={20} color={colors.faint} />

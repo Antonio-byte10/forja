@@ -1,0 +1,31 @@
+{
+  "_sobre": "Ficha F no formato proposto para a próxima versão (ver MAPEAMENTO.md, seção 2.5). 'par' agrupa os exercícios feitos em sequência; 'animacao' aponta para boneco/animacoes.js; 'foto' para imagens/.",
+  "id": "casa-f",
+  "name": "F",
+  "title": "Flexão & Abdômen (sem impacto)",
+  "lugar": "casa",
+  "descansoEntrePares": 60,
+  "exercises": [
+    { "par": "aquecimento", "name": "Marcha com joelho alto", "animacao": "marcha_joelho_alto", "medida": "tempo", "sets": 1, "segundos": 60 },
+    { "par": "aquecimento", "name": "Flexão na parede", "animacao": "flexao_parede", "medida": "reps", "sets": 1, "reps": 15 },
+    { "par": "aquecimento", "name": "Perdigueiro", "animacao": "perdigueiro", "medida": "reps", "sets": 1, "reps": 8, "porLado": true },
+    { "par": "aquecimento", "name": "Gato (mobilidade da coluna)", "foto": "gato", "medida": "alongamento", "sets": 1, "segundos": 30 },
+
+    { "par": 1, "name": "Flexão inclinada (mãos no banco)", "animacao": "flexao_inclinada_banco", "medida": "reps", "sets": 3, "reps": 12 },
+    { "par": 1, "name": "Abdominal (crunch)", "animacao": "abdominal", "catalogKey": "abdominal", "medida": "reps", "sets": 3, "reps": 15 },
+    { "par": 2, "name": "Flexão tradicional", "animacao": "flexao", "catalogKey": "flexao", "medida": "reps", "sets": 3, "reps": [8, 12] },
+    { "par": 2, "name": "Abdominal infra", "animacao": "abdominal_infra", "catalogKey": "abdominal_infra", "medida": "reps", "sets": 3, "reps": 12 },
+    { "par": 3, "name": "Flexão aberta", "animacao": "flexao_aberta", "foto": "flexao_aberta", "medida": "reps", "sets": 3, "reps": [8, 10] },
+    { "par": 3, "name": "Dead bug", "animacao": "dead_bug", "catalogKey": "dead_bug", "medida": "reps", "sets": 3, "reps": 8, "porLado": true },
+    { "par": 4, "name": "Flexão diamante (fechada)", "animacao": "flexao_diamante", "catalogKey": "flexao_diamante", "medida": "reps", "sets": 3, "reps": [6, 10] },
+    { "par": 4, "name": "Canoa (hollow hold)", "animacao": "canoa", "medida": "tempo", "sets": 3, "segundos": [20, 30] },
+    { "par": 5, "name": "Flexão pike", "animacao": "flexao_pike", "medida": "reps", "sets": 3, "reps": [6, 8] },
+    { "par": 5, "name": "Prancha com toque no ombro", "animacao": "prancha_toque_ombro", "medida": "reps", "sets": 3, "reps": 10, "porLado": true },
+    { "par": 6, "name": "Flexão negativa (desce em 3 s)", "animacao": "flexao_negativa", "medida": "reps", "sets": 2, "reps": 5 },
+    { "par": 6, "name": "Prancha", "animacao": "prancha", "catalogKey": "prancha", "medida": "tempo", "sets": 2, "segundos": [30, 45] },
+
+    { "par": "volta-a-calma", "name": "Postura da criança", "foto": "postura_crianca", "medida": "alongamento", "sets": 1, "segundos": 45 },
+    { "par": "volta-a-calma", "name": "Torção da coluna", "foto": "torcao_coluna", "medida": "alongamento", "sets": 1, "segundos": 30, "porLado": true },
+    { "par": "volta-a-calma", "name": "Tríceps atrás da cabeça", "foto": "triceps_alongamento", "medida": "alongamento", "sets": 1, "segundos": 30, "porLado": true }
+  ]
+}

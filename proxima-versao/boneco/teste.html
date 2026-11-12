@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teste do boneco</title>
+<style>body{margin:0;background:#0A0A0B;color:#eee;font:12px system-ui}main{padding:6px;display:grid;gap:6px}
+.r{background:#16161a;border-radius:10px;padding:4px}.q{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}svg{display:block;width:100%;aspect-ratio:1.5}</style>
+</head><body><main id="g"></main>
+<script src="boneco.js"></script>
+<script>
+// Mostra todas as poses de cada exercício, paradas, para conferir.
+const q=new URLSearchParams(location.search), so=q.get('so');
+for(const [k,ex] of Object.entries(ANIMACOES)){ if(so&&!so.split(',').includes(k))continue;
+  const r=document.createElement('div');r.className='r';r.append(k);const qd=document.createElement('div');qd.className='q';r.append(qd);g.append(r);
+  ex.poses.forEach((_,i)=>{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');qd.append(s);Boneco.animar(s,ex,{parado:i+1});});}
+</script></body></html>

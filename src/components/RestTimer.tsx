@@ -6,22 +6,31 @@ import { colors, radius } from '@/theme';
 import { Icon } from './Icon';
 import { Button, ProgressBar, Txt } from './ui';
 
-export type Rest = { end: number; total: number };
+/** `exec`: a contagem é da própria série (prancha, alongamento), não do descanso. */
+export type Rest = { end: number; total: number; exec?: { ex: number; set: number; nome: string } };
 
-/** Contagem do descanso entre séries; some sozinho e vibra ao terminar. */
-export function RestTimer({ rest, onChange, bottom }: { rest?: Rest; onChange: (rest?: Rest) => void; bottom: number }) {
+/**
+ * Contagem do descanso ou da série por tempo; vibra ao terminar.
+ * `onEnd` avisa quando acabou (sozinha ou pelo botão); `onChange` ajusta o tempo.
+ */
+export function RestTimer({ rest, onChange, onEnd, bottom }: {
+  rest?: Rest;
+  onChange: (rest: Rest) => void;
+  onEnd: (rest: Rest) => void;
+  bottom: number;
+}) {
   const now = useNow(250);
   const left = rest ? rest.end - now : 0;
   const over = rest !== undefined && left <= 0;
 
   useEffect(() => {
-    if (!over) return;
-    Vibration.vibrate(500);
-    onChange(undefined);
-  }, [over, onChange]);
+    if (!over || !rest) return;
+    Vibration.vibrate(rest.exec ? [0, 300, 150, 300] : 500);
+    onEnd(rest);
+  }, [over, rest, onEnd]);
 
   if (!rest || over) return null;
-  const shift = (ms: number) => onChange({ end: rest.end + ms, total: Math.max(1000, rest.total + ms) });
+  const shift = (ms: number) => onChange({ ...rest, end: rest.end + ms, total: Math.max(1000, rest.total + ms) });
 
   return (
     <View style={[s.bar, { bottom }]} accessibilityLiveRegion="polite">
@@ -30,13 +39,13 @@ export function RestTimer({ rest, onChange, bottom }: { rest?: Rest; onChange: (
         <View style={s.time}>
           <View style={s.labelRow}>
             <Icon name="timer" size={14} color={colors.accent} />
-            <Txt v="label" style={{ color: colors.accent }}>Descanso</Txt>
+            <Txt v="label" style={{ color: colors.accent, flexShrink: 1 }} numberOfLines={1}>{rest.exec ? rest.exec.nome : 'Descanso'}</Txt>
           </View>
           <Txt v="num" style={s.clock}>{formatClock(left)}</Txt>
         </View>
         <Button small variant="secondary" label="−0:15" onPress={() => shift(-15_000)} />
         <Button small variant="secondary" label="+0:15" onPress={() => shift(15_000)} />
-        <Button small label="Pular" onPress={() => onChange(undefined)} />
+        <Button small label={rest.exec ? 'Feito' : 'Pular'} onPress={() => onEnd(rest)} />
       </View>
     </View>
   );

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Image, Pressable, StyleSheet, Text, TextInput, View,
   type StyleProp, type TextProps, type TextStyle, type ViewProps, type ViewStyle,
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalog } from '@/data/catalog';
 import { parseNumber } from '@/lib/workout';
 import { colors, fonts, radius } from '@/theme';
+import { Boneco } from './Boneco';
 import { Icon, type IconName } from './Icon';
 
 const variants = StyleSheet.create({
@@ -152,19 +153,35 @@ export function Stepper({ value, onChange, min = 1, label }: { value: number; on
   );
 }
 
-/** `size` é a altura: miniatura 3:2 (a foto inteira, sem cortar). '100%' ocupa a largura toda. */
-export function ExerciseImage({ catalogKey, name, size }: { catalogKey?: string; name: string; size: number | '100%' }) {
-  const source = catalogKey ? catalog[catalogKey]?.image : undefined;
+/** Alterna entre 0 e 1 para trocar as duas fotos do movimento. */
+function useFase(ligado: boolean) {
+  const [fase, setFase] = useState(0);
+  useEffect(() => {
+    if (!ligado) return;
+    const id = setInterval(() => setFase((f) => 1 - f), 1100);
+    return () => clearInterval(id);
+  }, [ligado]);
+  return ligado ? fase : 0;
+}
+
+/**
+ * `size` é a altura: miniatura 3:2 (a foto inteira, sem cortar). '100%' ocupa a largura toda.
+ * `animado`: mostra o movimento — o boneco, se o exercício tiver, ou as duas fotos alternando.
+ */
+export function ExerciseImage({ catalogKey, name, size, animado }: { catalogKey?: string; name: string; size: number | '100%'; animado?: boolean }) {
+  const item = catalogKey ? catalog[catalogKey] : undefined;
+  const boneco = item?.anim && (animado || !item.image) ? item.anim : undefined;
+  const fase = useFase(!!animado && !boneco && !!item?.image2);
   const box = size === '100%' ? { width: '100%' as const, aspectRatio: 1.5 } : { width: size * 1.5, height: size };
   const small = size !== '100%' && size < 60;
   return (
-    <View style={[s.image, small && { borderRadius: 8 }, box]}>
-      {source ? (
-        <Image source={source} resizeMode="cover" style={s.imageFill} accessibilityLabel={`Foto: ${name}`} />
+    <View style={[s.image, small && { borderRadius: 8 }, box, (boneco || !item?.image) && s.placeholder]}>
+      {boneco ? (
+        <Boneco anim={boneco} parado={!animado} label={`Movimento: ${name}`} />
+      ) : item?.image ? (
+        <Image source={fase && item.image2 ? item.image2 : item.image} resizeMode="cover" style={s.imageFill} accessibilityLabel={`Foto: ${name}`} />
       ) : (
-        <View style={[s.imageFill, s.placeholder]}>
-          <Icon name="dumbbell" size={small ? 16 : 28} color={colors.faint} />
-        </View>
+        <Icon name="dumbbell" size={small ? 16 : 28} color={colors.faint} />
       )}
     </View>
   );

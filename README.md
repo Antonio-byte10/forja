@@ -1,7 +1,8 @@
 # Treino
 
-App pessoal de treino: fichas A/B/C, registro de carga e repetições por série, volume total,
-cronômetro de descanso, histórico e backup. Tudo fica salvo no celular, sem servidor.
+App pessoal de treino: fichas da academia (A/B/C) e de casa, registro por série (carga, repetições,
+tempo ou distância), treino livre, atividades avulsas (corrida, futebol…), cronômetro, histórico por dia
+e backup. Tudo fica salvo no celular, sem servidor.
 
 ## Rodar no computador
 
@@ -36,10 +37,19 @@ Para lançar uma versão nova, aumente `expo.version` e `expo.android.versionCod
 
 ## Estrutura
 
-- `src/app/` — telas (Expo Router): início, treino, fichas, histórico, backup
-- `src/lib/workout.ts` — regras do treino (funções puras, testadas em `workout.test.ts`)
-- `src/store.ts` — estado salvo no aparelho (Zustand + AsyncStorage)
-- `src/data/` — catálogo com 155 exercícios em 10 grupos musculares e as fichas A/B/C de exemplo (5 exercícios cada)
+- `src/app/` — telas (Expo Router): início, treino, fichas, histórico, registrar atividade, backup
+- `src/lib/workout.ts` — regras do treino (funções puras, testadas em `workout.test.ts` e `medidas.test.ts`)
+- `src/lib/boneco.ts` — boneco animado: poses (ângulos) viram formas de SVG; `src/components/Boneco.tsx` desenha
+- `src/store.ts` — estado salvo no aparelho (Zustand + AsyncStorage). O treino em andamento fica numa chave
+  separada, para não regravar o histórico a cada número digitado. Os dados têm versão e migração.
+- `src/data/` — catálogo com 249 exercícios em 13 grupos, as poses dos bonecos (`animacoes.ts`) e as fichas de
+  exemplo: A/B/C da academia e a F de casa (flexão e abdômen, sem impacto)
 - `assets/exercises/` — fotos da [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (domínio público)
+- `proxima-versao/` — pesquisa que deu origem à versão 1.1: galeria de fotos, ficha em HTML e mapeamento
+- `scripts/` — gerar o APK, o catálogo extra (`gerar-catalogo-extra.py`) e o boneco da galeria (`gerar-boneco-web.mjs`)
 
-Exercício **unilateral**: a carga digitada é por lado e o volume conta os dois lados (carga × reps × 2).
+Cada exercício tem uma **medida**: carga (kg × reps), repetições (peso do corpo), tempo, cardio (tempo +
+distância) ou alongamento. Exercício **unilateral**: a carga digitada é por lado e o volume conta os dois
+lados (carga × reps × 2).
+
+Fichas de casa, treinos livres e atividades avulsas não mexem na sequência A → B → C da academia.

@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExercisePicker } from '@/components/ExercisePicker';
 import { Button, Card, ExerciseImage, IconButton, NumberInput, ScreenHeader, Stepper, Txt } from '@/components/ui';
 import { confirm } from '@/lib/platform';
-import type { Plan, PlanExercise } from '@/lib/types';
-import { uid } from '@/lib/workout';
+import type { Lugar, Medida, Plan, PlanExercise } from '@/lib/types';
+import { medidaDe, porTempo, uid } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
 
@@ -14,9 +14,31 @@ import { colors, fonts, radius } from '@/theme';
 const freeLetter = (plans: Plan[]) =>
   'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((l) => !plans.some((p) => p.name === l)) ?? '?';
 
+const MEDIDAS: [Medida, string][] = [['carga', 'Carga'], ['reps', 'Só reps'], ['tempo', 'Tempo'], ['cardio', 'Cardio'], ['alongamento', 'Alongar']];
+const LUGARES: [Lugar, string][] = [['academia', 'Academia'], ['casa', 'Casa']];
+
+function Opcoes<T extends string>({ options, value, onChange, label }: { options: [T, string][]; value: T; onChange: (v: T) => void; label: string }) {
+  return (
+    <View style={s.opcoes} accessibilityLabel={label}>
+      {options.map(([v, texto]) => (
+        <Pressable
+          key={v}
+          onPress={() => onChange(v)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: v === value }}
+          style={({ pressed }) => [s.opcao, v === value && s.opcaoOn, pressed && { opacity: 0.7 }]}
+        >
+          <Txt style={[s.opcaoTexto, v === value && { color: colors.onAccent }]}>{texto}</Txt>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function EditarFicha() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { plans, savePlan, deletePlan } = useStore();
+  const plans = useStore((st) => st.plans);
+  const { savePlan, deletePlan } = useStore.getState();
   const { bottom } = useSafeAreaInsets();
   const saved = plans.find((p) => p.id === id);
   const [plan, setPlan] = useState<Plan>(
@@ -78,6 +100,12 @@ export default function EditarFicha() {
           </View>
         </View>
 
+        <View style={s.field}>
+          <Txt v="label">Onde</Txt>
+          <Opcoes label="Onde" options={LUGARES} value={plan.lugar ?? 'academia'} onChange={(lugar) => setPlan((p) => ({ ...p, lugar }))} />
+          <Txt v="sub">Fichas de casa não entram na sequência A → B → C da academia.</Txt>
+        </View>
+
         <Txt v="label" style={{ marginTop: 8 }}>
           {plan.exercises.length ? `Exercícios (${plan.exercises.length})` : 'Exercícios'}
         </Txt>
@@ -103,36 +131,57 @@ export default function EditarFicha() {
                 size={40}
               />
             </View>
+            <Opcoes
+              label={`${ex.name}: como medir`}
+              options={MEDIDAS}
+              value={medidaDe(ex)}
+              onChange={(medida) => patch(i, { medida, ...(porTempo(medida) && !ex.seconds && { seconds: medida === 'cardio' ? 1200 : 30 }), ...(!porTempo(medida) && !ex.reps && { reps: 10 }) })}
+            />
             <View style={s.controls}>
               <View style={{ flex: 1 }}>
                 <Stepper label="Séries" value={ex.sets} onChange={(sets) => patch(i, { sets })} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Stepper label="Reps" value={ex.reps} onChange={(reps) => patch(i, { reps })} />
-              </View>
+              {porTempo(medidaDe(ex)) ? (
+                <View style={[s.field, { flex: 1 }]}>
+                  <Txt v="label">{medidaDe(ex) === 'cardio' ? 'Minutos' : 'Segundos'}</Txt>
+                  {medidaDe(ex) === 'cardio' ? (
+                    <NumberInput label={`${ex.name}: minutos`} value={Math.round((ex.seconds ?? 0) / 6) / 10} onChange={(min) => patch(i, { seconds: Math.round(min * 60) })} style={s.tempo} />
+                  ) : (
+                    <NumberInput integer label={`${ex.name}: segundos`} value={ex.seconds ?? 0} onChange={(seconds) => patch(i, { seconds })} style={s.tempo} />
+                  )}
+                </View>
+              ) : (
+                <View style={{ flex: 1 }}>
+                  <Stepper label="Reps" value={ex.reps} onChange={(reps) => patch(i, { reps })} />
+                </View>
+              )}
             </View>
-            <View style={s.weightRow}>
-              <View style={{ flex: 1 }}>
-                <Txt style={s.switchLabel}>Carga inicial</Txt>
-                <Txt v="sub">{ex.unilateral ? 'kg em cada lado' : 'kg'} · depois o app usa a da última vez</Txt>
-              </View>
-              <NumberInput label={`${ex.name}: carga inicial`} value={ex.weight} onChange={(weight) => patch(i, { weight })} style={s.weight} />
-            </View>
-            <View style={s.switchRow}>
-              <View style={{ flex: 1 }}>
-                <Txt style={s.switchLabel}>Carga por lado</Txt>
-                <Txt v="sub">Halteres e exercícios unilaterais: o volume conta os dois lados.</Txt>
-              </View>
-              <Switch
-                value={ex.unilateral}
-                onValueChange={(unilateral) => patch(i, { unilateral })}
-                trackColor={{ true: colors.accent, false: colors.line }}
-                thumbColor={colors.text}
-                // No navegador o Switch usa outra prop para a bolinha ligada.
-                {...({ activeThumbColor: colors.text } as object)}
-                accessibilityLabel={`${ex.name}: carga por lado`}
-              />
-            </View>
+            {medidaDe(ex) === 'carga' && (
+              <>
+                <View style={s.weightRow}>
+                  <View style={{ flex: 1 }}>
+                    <Txt style={s.switchLabel}>Carga inicial</Txt>
+                    <Txt v="sub">{ex.unilateral ? 'kg em cada lado' : 'kg'} · depois o app usa a da última vez</Txt>
+                  </View>
+                  <NumberInput label={`${ex.name}: carga inicial`} value={ex.weight} onChange={(weight) => patch(i, { weight })} style={s.weight} />
+                </View>
+                <View style={s.switchRow}>
+                  <View style={{ flex: 1 }}>
+                    <Txt style={s.switchLabel}>Carga por lado</Txt>
+                    <Txt v="sub">Halteres e exercícios unilaterais: o volume conta os dois lados.</Txt>
+                  </View>
+                  <Switch
+                    value={ex.unilateral}
+                    onValueChange={(unilateral) => patch(i, { unilateral })}
+                    trackColor={{ true: colors.accent, false: colors.line }}
+                    thumbColor={colors.text}
+                    // No navegador o Switch usa outra prop para a bolinha ligada.
+                    {...({ activeThumbColor: colors.text } as object)}
+                    accessibilityLabel={`${ex.name}: carga por lado`}
+                  />
+                </View>
+              </>
+            )}
           </Card>
         ))}
 
@@ -161,4 +210,9 @@ const s = StyleSheet.create({
   weight: { width: 88, height: 48 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderColor: colors.line, paddingTop: 12 },
   switchLabel: { fontFamily: fonts.semibold, fontSize: 15 },
+  tempo: { height: 44 },
+  opcoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  opcao: { height: 34, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.raised, justifyContent: 'center' },
+  opcaoOn: { backgroundColor: colors.accent },
+  opcaoTexto: { fontFamily: fonts.semibold, fontSize: 13 },
 });

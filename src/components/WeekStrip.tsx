@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import type { Session } from '@/lib/types';
-import { dayKey } from '@/lib/workout';
+import { dayKey, totals } from '@/lib/workout';
 import { colors, fonts } from '@/theme';
 import { Icon } from './Icon';
 import { Card, Txt } from './ui';
@@ -12,14 +12,15 @@ export function WeekStrip({ history }: { history: Session[] }) {
   const today = new Date();
   const trained = new Set(history.map((s) => dayKey(s.startedAt)));
   const days = Array.from({ length: 7 }, (_, i) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + i));
-  const count = days.filter((d) => trained.has(dayKey(d))).length;
+  // Conta treinos (dois no mesmo dia valem dois) e o tempo somado da semana.
+  const { sessions: count, minutes } = totals(history, days[0].getTime(), days[6].getTime() + 86_400_000);
 
   return (
     <Card style={s.card}>
       <View style={s.head}>
         <Txt v="label">Esta semana</Txt>
         <Txt v="label" style={{ color: count ? colors.accent : colors.faint }}>
-          {count === 1 ? '1 treino' : `${count} treinos`}
+          {count === 1 ? '1 treino' : `${count} treinos`}{minutes ? ` · ${minutes} min` : ''}
         </Txt>
       </View>
       <View style={s.row}>

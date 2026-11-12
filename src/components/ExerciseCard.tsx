@@ -1,32 +1,52 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { ExerciseLog, SetLog } from '@/lib/types';
-import { exerciseVolume, formatKg } from '@/lib/workout';
+import { exerciseVolume, formatKg, formatKm, formatSeconds, formatSet, medidaDe } from '@/lib/workout';
 import { colors, fonts, radius } from '@/theme';
 import { Icon } from './Icon';
 import { Button, Card, ExerciseImage, IconButton, NumberInput, Txt } from './ui';
 
 type Props = {
+  /** Posição do exercício no treino; volta em todos os avisos para o cartão não precisar de funções novas a cada toque. */
+  index: number;
   exercise: ExerciseLog;
   last?: SetLog[];
   /** Próximo exercício a fazer: ganha destaque. */
   current?: boolean;
-  onChange: (set: number, patch: Partial<SetLog>) => void;
-  onToggle: (set: number, done: boolean) => void;
-  onAddSet: () => void;
-  onRemoveSet: () => void;
+  onChange: (ex: number, set: number, patch: Partial<SetLog>) => void;
+  onToggle: (ex: number, set: number, done: boolean) => void;
+  /** Exercícios por tempo: começa a contagem da série. */
+  onTimer: (ex: number, set: number) => void;
+  onAddSet: (ex: number) => void;
+  onRemoveSet: (ex: number) => void;
+  onRemove?: (ex: number) => void;
 };
 
-export function ExerciseCard({ exercise, last, current, onChange, onToggle, onAddSet, onRemoveSet }: Props) {
+/** O que foi feito no exercício, na unidade em que ele é medido. */
+function feito(exercise: ExerciseLog) {
+  const medida = medidaDe(exercise);
+  const done = exercise.sets.filter((x) => x.done);
+  if (medida === 'carga') return `${formatKg(exerciseVolume(exercise))} kg de volume`;
+  if (medida === 'reps') return `${done.reduce((n, x) => n + x.reps, 0)} repetições`;
+  const sec = done.reduce((n, x) => n + (x.seconds ?? 0), 0);
+  const m = done.reduce((n, x) => n + (x.meters ?? 0), 0);
+  return medida === 'cardio' ? `${Math.round(sec / 60)} min${m ? ` · ${formatKm(m)} km` : ''}` : formatSeconds(sec);
+}
+
+export const ExerciseCard = memo(function ExerciseCard({
+  index, exercise, last, current, onChange, onToggle, onTimer, onAddSet, onRemoveSet, onRemove,
+}: Props) {
   const { name, catalogKey, unilateral, sets } = exercise;
+  const medida = medidaDe(exercise);
+  const cronometrado = medida === 'tempo' || medida === 'alongamento';
   const doneCount = sets.filter((x) => x.done).length;
   const allDone = doneCount === sets.length;
-  const volume = exerciseVolume(exercise);
 
   // Fecha sozinho quando todas as séries estão feitas; um toque abre ou fecha de novo.
   const [manual, setManual] = useState<boolean>();
   const [photo, setPhoto] = useState(false);
   const open = manual ?? !allDone;
+  const detalhe = medida === 'carga' ? (unilateral ? ' · carga por lado' : '') : medida === 'reps' ? ' · peso do corpo' : medida === 'cardio' ? ' · cardio' : ' · por tempo';
 
   return (
     <Card style={[s.card, current && s.current]}>
@@ -34,7 +54,7 @@ export function ExerciseCard({ exercise, last, current, onChange, onToggle, onAd
         <Pressable
           onPress={() => setPhoto((p) => !p)}
           accessibilityRole="button"
-          accessibilityLabel={`${photo ? 'Esconder' : 'Ver'} foto de ${name}`}
+          accessibilityLabel={`${photo ? 'Esconder' : 'Ver'} o movimento de ${name}`}
           style={({ pressed }) => pressed && s.pressed}
         >
           <ExerciseImage catalogKey={catalogKey} name={name} size={44} />
@@ -49,7 +69,7 @@ export function ExerciseCard({ exercise, last, current, onChange, onToggle, onAd
           <View style={{ flex: 1 }}>
             <Txt v="h2" numberOfLines={2} style={allDone && !open && { color: colors.sub }}>{name}</Txt>
             <Txt v="sub" numberOfLines={1}>
-              {allDone ? `${formatKg(volume)} kg de volume` : `${sets.length} séries${unilateral ? ' · carga por lado' : ''}`}
+              {allDone ? feito(exercise) : `${sets.length} ${sets.length === 1 ? 'série' : 'séries'}${detalhe}`}
             </Txt>
           </View>
           {allDone ? (
@@ -65,63 +85,84 @@ export function ExerciseCard({ exercise, last, current, onChange, onToggle, onAd
 
       {open && (
         <View style={s.body}>
-          {photo && <ExerciseImage catalogKey={catalogKey} name={name} size="100%" />}
+          {photo && <ExerciseImage catalogKey={catalogKey} name={name} size="100%" animado />}
 
           <View style={s.row}>
             <Txt v="label" style={[s.colSet, s.colHead]} numberOfLines={1}>Série</Txt>
             <Txt v="label" style={[s.colPrev, s.colHead]} numberOfLines={1}>Última</Txt>
-            <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>{unilateral ? 'kg/lado' : 'kg'}</Txt>
-            <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>Reps</Txt>
+            {medida === 'carga' && <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>{unilateral ? 'kg/lado' : 'kg'}</Txt>}
+            {(medida === 'carga' || medida === 'reps') && <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>Reps</Txt>}
+            {cronometrado && <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>Segundos</Txt>}
+            {medida === 'cardio' && <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>Min</Txt>}
+            {medida === 'cardio' && <Txt v="label" style={[s.colInput, s.colHead]} numberOfLines={1}>Km</Txt>}
             <View style={s.colCheck} />
           </View>
 
           {sets.map((set, i) => {
             const prev = last?.[i];
+            const input = set.done && s.inputDone;
+            // Série por tempo ainda não feita: o botão começa a contagem em vez de só marcar.
+            const contar = cronometrado && !set.done;
             return (
               <View key={i} style={[s.row, s.setRow, set.done && s.setDone]}>
                 <Txt style={[s.colSet, s.setNum, set.done && { color: colors.accent }]}>{i + 1}</Txt>
                 <Txt v="sub" style={s.colPrev} numberOfLines={1}>
-                  {prev ? `${formatKg(prev.weight)}×${prev.reps}` : '—'}
+                  {!prev ? '—' : medida === 'cardio' ? `${Math.round((prev.seconds ?? 0) / 60)} min` : formatSet(prev, medida)}
                 </Txt>
-                <View style={s.colInput}>
-                  <NumberInput
-                    label={`${name}: carga da série ${i + 1}`}
-                    value={set.weight}
-                    onChange={(weight) => onChange(i, { weight })}
-                    style={set.done && s.inputDone}
-                  />
-                </View>
-                <View style={s.colInput}>
-                  <NumberInput
-                    integer
-                    label={`${name}: repetições da série ${i + 1}`}
-                    value={set.reps}
-                    onChange={(reps) => onChange(i, { reps })}
-                    style={set.done && s.inputDone}
-                  />
-                </View>
+                {medida === 'carga' && (
+                  <View style={s.colInput}>
+                    <NumberInput label={`${name}: carga da série ${i + 1}`} value={set.weight} onChange={(weight) => onChange(index, i, { weight })} style={input} />
+                  </View>
+                )}
+                {(medida === 'carga' || medida === 'reps') && (
+                  <View style={s.colInput}>
+                    <NumberInput integer label={`${name}: repetições da série ${i + 1}`} value={set.reps} onChange={(reps) => onChange(index, i, { reps })} style={input} />
+                  </View>
+                )}
+                {cronometrado && (
+                  <View style={s.colInput}>
+                    <NumberInput integer label={`${name}: segundos da série ${i + 1}`} value={set.seconds ?? 0} onChange={(seconds) => onChange(index, i, { seconds })} style={input} />
+                  </View>
+                )}
+                {medida === 'cardio' && (
+                  <>
+                    <View style={s.colInput}>
+                      <NumberInput label={`${name}: minutos`} value={Math.round(((set.seconds ?? 0) / 60) * 10) / 10} onChange={(min) => onChange(index, i, { seconds: Math.round(min * 60) })} style={input} />
+                    </View>
+                    <View style={s.colInput}>
+                      <NumberInput label={`${name}: quilômetros`} value={(set.meters ?? 0) / 1000} onChange={(km) => onChange(index, i, { meters: Math.round(km * 1000) })} style={input} />
+                    </View>
+                  </>
+                )}
                 <Pressable
-                  onPress={() => onToggle(i, !set.done)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: set.done }}
-                  accessibilityLabel={`${name}: série ${i + 1} feita`}
+                  onPress={() => (contar ? onTimer(index, i) : onToggle(index, i, !set.done))}
+                  onLongPress={() => onToggle(index, i, !set.done)}
+                  accessibilityRole={contar ? 'button' : 'checkbox'}
+                  accessibilityState={contar ? undefined : { checked: set.done }}
+                  accessibilityLabel={contar ? `${name}: começar a contagem da série ${i + 1}` : `${name}: série ${i + 1} feita`}
                   style={({ pressed }) => [s.colCheck, s.check, set.done && s.checkOn, pressed && s.pressed]}
                 >
-                  <Icon name="check" size={22} color={set.done ? colors.onAccent : colors.faint} stroke={3} />
+                  {contar ? (
+                    <Icon name="play" size={18} color={colors.accent} fill={colors.accent} />
+                  ) : (
+                    <Icon name="check" size={22} color={set.done ? colors.onAccent : colors.faint} stroke={3} />
+                  )}
                 </Pressable>
               </View>
             );
           })}
+          {cronometrado && !allDone && <Txt v="sub" style={s.hint}>Toque em ▶ para contar o tempo. Segure para marcar como feita sem contar.</Txt>}
 
           <View style={s.footer}>
-            <IconButton icon="minus" label="Remover a última série" onPress={onRemoveSet} disabled={sets.length <= 1} filled />
-            <Button small variant="secondary" icon="plus" label="Adicionar série" onPress={onAddSet} style={{ flex: 1 }} />
+            <IconButton icon="minus" label="Remover a última série" onPress={() => onRemoveSet(index)} disabled={sets.length <= 1} filled />
+            <Button small variant="secondary" icon="plus" label="Adicionar série" onPress={() => onAddSet(index)} style={{ flex: 1 }} />
+            {onRemove && <IconButton icon="trash" label={`Tirar ${name} do treino`} color={colors.danger} onPress={() => onRemove(index)} filled />}
           </View>
         </View>
       )}
     </Card>
   );
-}
+});
 
 const s = StyleSheet.create({
   card: { padding: 0, borderWidth: 1.5, borderColor: 'transparent', overflow: 'hidden' },
@@ -144,5 +185,6 @@ const s = StyleSheet.create({
   inputDone: { backgroundColor: 'transparent' },
   check: { height: 46, borderRadius: radius.sm, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: colors.accent },
+  hint: { fontSize: 12, marginTop: 2 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
 });

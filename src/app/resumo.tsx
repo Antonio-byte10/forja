@@ -1,6 +1,7 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FotosDoTreino } from '@/components/Fotos';
 import { Icon } from '@/components/Icon';
 import { Button, Card, ExerciseImage, Txt } from '@/components/ui';
 import {
@@ -88,6 +89,10 @@ export default function Resumo() {
           </View>
         );
       })}
+
+      <Card>
+        <FotosDoTreino sessionId={session.id} t={session.startedAt} />
+      </Card>
 
       <Button label="Voltar ao início" icon="home" onPress={() => router.replace('/')} style={{ marginTop: 8 }} />
     </ScrollView>

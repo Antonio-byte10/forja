@@ -2,8 +2,10 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Miniaturas } from '@/components/Fotos';
 import { Icon } from '@/components/Icon';
-import { Card, ExerciseImage, Txt } from '@/components/ui';
+import { PesoCard } from '@/components/PesoCard';
+import { Button, Card, ExerciseImage, Txt } from '@/components/ui';
 import { catalog } from '@/data/catalog';
 import { daysAgo, exerciciosFeitos, formatKg, seriesPorGrupo } from '@/lib/workout';
 import { useStore } from '@/store';
@@ -21,6 +23,7 @@ const PERIODOS = [
 
 export default function Progresso() {
   const history = useStore((st) => st.history);
+  const fotos = useStore((st) => st.fotos);
   const { top } = useSafeAreaInsets();
   const [dias, setDias] = useState<7 | 28>(7);
   const [todos, setTodos] = useState(false);
@@ -37,6 +40,22 @@ export default function Progresso() {
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: top + 16 }]}>
       <Txt v="hero">Progresso</Txt>
+
+      <PesoCard />
+
+      <Card style={{ gap: 12 }}>
+        <View style={s.headRow}>
+          <Icon name="camera" size={20} color={colors.accent} />
+          <Txt v="h2" style={{ flex: 1 }}>Fotos de progresso</Txt>
+          {fotos.length > 0 && <Txt v="label">{fotos.length}</Txt>}
+        </View>
+        {fotos.length ? (
+          <Miniaturas fotos={fotos.slice(0, 8)} size={56} />
+        ) : (
+          <Txt v="sub">Uma foto por semana mostra o que a balança não mostra.</Txt>
+        )}
+        <Button small variant="secondary" icon="image" label={fotos.length ? 'Ver todas e comparar' : 'Adicionar foto'} onPress={() => router.push('/fotos')} />
+      </Card>
 
       <Card style={{ gap: 14 }}>
         <View style={s.headRow}>

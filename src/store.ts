@@ -3,12 +3,18 @@ import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { defaultPlans, fichaCasa } from '@/data/defaults';
-import type { Ajustes, Backup, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
+import type { Ajustes, Backup, Foto, Peso, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
 import * as w from '@/lib/workout';
 
 const storage = createJSONStorage(() => AsyncStorage);
 
-type Store = Backup & {
+type Store = Omit<Backup, 'pesos'> & {
+  pesos: Peso[];
+  fotos: Foto[];
+  addPeso: (peso: Peso) => void;
+  deletePeso: (t: number) => void;
+  addFoto: (foto: Foto) => void;
+  deleteFoto: (id: string) => void;
   ajustes: Ajustes;
   setAjustes: (patch: Partial<Ajustes>) => void;
   savePlan: (plan: Plan) => void;
@@ -45,7 +51,17 @@ export const useStore = create<Store>()(
     (set) => ({
       plans: defaultPlans,
       history: [],
-      ajustes: { metaSemanal: 4 },
+      pesos: [],
+      fotos: [],
+      // Um registro por dia: pesar de novo no mesmo dia substitui.
+      addPeso: (peso) =>
+        set(({ pesos }) => ({
+          pesos: [...pesos.filter((p) => w.dayKey(p.t) !== w.dayKey(peso.t)), peso].sort((a, b) => a.t - b.t),
+        })),
+      deletePeso: (t) => set(({ pesos }) => ({ pesos: pesos.filter((p) => p.t !== t) })),
+      addFoto: (foto) => set(({ fotos }) => ({ fotos: [...fotos, foto].sort((a, b) => b.t - a.t) })),
+      deleteFoto: (id) => set(({ fotos }) => ({ fotos: fotos.filter((f) => f.id !== id) })),
+      ajustes: { metaSemanal: 4, metaPassos: 8000 },
       setAjustes: (patch) => set(({ ajustes }) => ({ ajustes: { ...ajustes, ...patch } })),
       savePlan: (plan) =>
         set(({ plans }) => ({
@@ -56,8 +72,8 @@ export const useStore = create<Store>()(
       deleteSession: (id) => set(({ history }) => ({ history: history.filter((s) => s.id !== id) })),
       updateSession: (session) =>
         set(({ history }) => ({ history: w.insertSession(history.filter((s) => s.id !== session.id), w.limparNotas(session)) })),
-      restore: ({ plans, history }) => {
-        set({ plans, history });
+      restore: ({ plans, history, pesos }) => {
+        set({ plans, history, ...(pesos && { pesos }) });
         useActive.setState({ active: undefined });
       },
     }),
@@ -66,7 +82,12 @@ export const useStore = create<Store>()(
       version: 2,
       storage,
       migrate,
-      partialize: ({ plans, history, ajustes }) => ({ plans, history, ajustes }),
+      partialize: ({ plans, history, ajustes, pesos, fotos }) => ({ plans, history, ajustes, pesos, fotos }),
+      // Dados salvos por versões antigas não têm os campos novos dos ajustes.
+      merge: (salvo, atual) => {
+        const s = (salvo ?? {}) as Partial<Store>;
+        return { ...atual, ...s, ajustes: { ...atual.ajustes, ...s.ajustes } };
+      },
     },
   ),
 );

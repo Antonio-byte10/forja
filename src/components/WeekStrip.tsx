@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { Session } from '@/lib/types';
-import { dayKey, totals } from '@/lib/workout';
+import { dayKey, semanasSeguidas, totals } from '@/lib/workout';
 import { colors, fonts } from '@/theme';
 import { Icon } from './Icon';
 import { useStore } from '@/store';
@@ -18,6 +18,7 @@ export function WeekStrip({ history }: { history: Session[] }) {
   const { sessions: count, minutes } = totals(history, days[0].getTime(), days[6].getTime() + 86_400_000);
   const meta = useStore((st) => st.ajustes.metaSemanal);
   const [editando, setEditando] = useState(false);
+  const sequencia = semanasSeguidas(history, meta, today.getTime());
   const mudarMeta = (n: number) => useStore.getState().setAjustes({ metaSemanal: Math.min(14, Math.max(1, n)) });
 
   return (
@@ -63,6 +64,14 @@ export function WeekStrip({ history }: { history: Session[] }) {
         })}
       </View>
       <ProgressBar value={count / meta} style={s.progress} />
+      {sequencia > 0 && (
+        <View style={s.streak}>
+          <Icon name="flame" size={14} color={colors.accent} fill={colors.accent} />
+          <Txt v="sub" style={{ fontSize: 13 }}>
+            {sequencia === 1 ? '1 semana' : `${sequencia} semanas`} seguidas batendo a meta
+          </Txt>
+        </View>
+      )}
     </Card>
   );
 }
@@ -79,4 +88,5 @@ const s = StyleSheet.create({
   num: { fontFamily: fonts.semibold, fontSize: 14 },
   progress: { height: 4 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

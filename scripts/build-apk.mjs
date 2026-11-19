@@ -36,7 +36,7 @@ const key = Object.fromEntries(
 );
 
 const { version, android } = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8')).expo;
-console.log(`\n▶ Treino ${version} (versionCode ${android.versionCode})\n`);
+console.log(`\n▶ Forja ${version} (versionCode ${android.versionCode})\n`);
 
 run('npx', ['expo', 'prebuild', '--platform', 'android', '--no-install']);
 // arm64-v8a: celulares atuais; armeabi-v7a: Androids mais simples que rodam em 32 bits.
@@ -48,7 +48,7 @@ run(join(root, 'android', win ? 'gradlew.bat' : 'gradlew'), ['assembleRelease', 
 // a mesma em todas as versões, para o celular aceitar a atualização sem apagar os dados.
 const built = join(root, 'android/app/build/outputs/apk/release/app-release.apk');
 mkdirSync(join(root, 'dist'), { recursive: true });
-const out = join(root, 'dist', `treino-${version}.apk`);
+const out = join(root, 'dist', `forja-${version}.apk`);
 const apksigner = join(env.ANDROID_HOME, 'build-tools', '37.0.0', win ? 'apksigner.bat' : 'apksigner');
 const pass = { ...env, TREINO_KS_PASS: key.storePassword };
 run(apksigner, [

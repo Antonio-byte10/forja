@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Treino",
-    "slug": "treino",
-    "scheme": "treino",
+    "name": "Forja",
+    "slug": "forja",
+    "scheme": "forja",
     "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,6 +23,9 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "permissions": [
+        "android.permission.health.READ_STEPS"
       ]
     },
     "web": {
@@ -37,10 +40,28 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/android-icon-monochrome.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#FF5B1F"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O Forja usa a câmera para você tirar fotos do seu progresso.",
+          "photosPermission": "O Forja abre suas fotos para você escolher fotos do seu progresso.",
+          "microphonePermission": false
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
       ]
-    ]
+    ],
+    "description": "Treino de força no seu celular: fichas, séries, progresso e backup. Sem conta, sem nuvem."
   }
 }

@@ -3,7 +3,10 @@
 _12/11/2026 — feito a partir do código atual (v1.0.0). Nada foi alterado no app._
 
 > **19/11/2026 (v1.2.0):** feitos 1.1–1.4, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.8, 2.9, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.4,
-> 5.1, 5.2 e 5.3. Ainda faltam: 1.5 (fotos em WebP), 2.7 (tipo de série), 2.10 (bi-set), 3.6 (peso corporal), 4.3 (exercício com foto) e 4.5 (deload).
+> 5.1, 5.2 e 5.3. Ainda faltam: 1.5 (fotos em WebP), 2.7 (tipo de série), 2.10 (bi-set), 4.3 (exercício com foto) e 4.5 (deload).
+>
+> **v1.2 (Forja):** também entraram 3.6 (peso corporal), fotos de progresso com antes/depois, passos do dia pelo
+> Health Connect e sequência de semanas batendo a meta.
 
 Esforço: **P** = algumas horas · **M** = um dia · **G** = mais de um dia.
 "Lib nova" = precisa adicionar uma biblioteca e gerar um APK novo (tudo continua local, sem nuvem).
@@ -80,3 +83,17 @@ Hoje está rápido porque o histórico é pequeno. Estes pontos pesam com o temp
 ---
 
 Próxima versão (treino em casa, peso do corpo, corrida, atividades): ver [proxima-versao/MAPEAMENTO.md](proxima-versao/MAPEAMENTO.md).
+
+## 6. Próximas ideias (depois da v1.2)
+
+| # | O quê | Por quê | Esforço |
+|---|---|---|---|
+| 6.1 | **Calorias e minutos ativos do Health Connect** | Já temos a conexão; ler `ActiveCaloriesBurned` e `ExerciseSession` é pouco código. | P |
+| 6.2 | **Gravar o treino no Health Connect** | O treino do Forja aparece no Samsung Health / Google Fit. | M |
+| 6.3 | **Medidas do corpo** (braço, cintura, coxa) | Complementa peso e fotos, que nem sempre mostram a mudança. | P |
+| 6.4 | **RPE / esforço por série** | Saber se a série foi leve ou no limite ajuda a decidir a carga. | P · muda formato |
+| 6.5 | **Widget na tela inicial do Android** | Próxima ficha e passos sem abrir o app. | G · lib nova |
+| 6.6 | **Fotos no backup** (arquivo .zip) | Hoje as fotos só saem uma a uma pelo compartilhar. | M · lib nova |
+| 6.7 | **Tema claro** | Treinar ao ar livre com sol forte. | M |
+| 6.8 | **Releases no GitHub com o APK** | Outras pessoas instalam sem compilar. | P |
+

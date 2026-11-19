@@ -1,14 +1,18 @@
 import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Button, Card, ScreenHeader, Txt } from '@/components/ui';
 import { abrirArquivo, compartilharArquivo } from '@/lib/arquivo';
+import app from '../../app.json';
 import { confirm } from '@/lib/platform';
 import { historicoCsv, parseBackup } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
+
+const REPO = 'https://github.com/Antonio-byte10/forja';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const hoje = () => {
@@ -19,6 +23,8 @@ const hoje = () => {
 export default function Backup() {
   const plans = useStore((st) => st.plans);
   const history = useStore((st) => st.history);
+  const pesos = useStore((st) => st.pesos);
+  const nFotos = useStore((st) => st.fotos.length);
   const restore = useStore((st) => st.restore);
   const ultimoBackup = useStore((st) => st.ajustes.ultimoBackup);
   const marcarBackup = () => useStore.getState().setAjustes({ ultimoBackup: Date.now() });
@@ -27,14 +33,14 @@ export default function Backup() {
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();
 
   const copy = async () => {
-    await Clipboard.setStringAsync(JSON.stringify({ plans, history }));
+    await Clipboard.setStringAsync(JSON.stringify({ plans, history, pesos }));
     marcarBackup();
     setMessage({ ok: true, text: 'Backup copiado. Cole numa conversa sua no WhatsApp, no e-mail ou num bloco de notas para guardar.' });
   };
 
   const salvarArquivo = async () => {
     try {
-      await compartilharArquivo(`treino-backup-${hoje()}.json`, JSON.stringify({ plans, history }), 'application/json');
+      await compartilharArquivo(`treino-backup-${hoje()}.json`, JSON.stringify({ plans, history, pesos }), 'application/json');
       marcarBackup();
       setMessage({ ok: true, text: 'Arquivo de backup criado. Guarde no Drive, no WhatsApp ou no e-mail.' });
     } catch {
@@ -100,6 +106,7 @@ export default function Backup() {
         </View>
         <Txt v="sub" style={{ fontSize: 12 }}>
           {ultimoBackup ? `Último backup: ${new Date(ultimoBackup).toLocaleDateString('pt-BR')}.` : 'Nenhum backup feito ainda.'}
+          {' '}O backup leva fichas, treinos e peso corporal.{nFotos ? ` As ${nFotos} fotos não vão no backup: abra a foto e toque em compartilhar para guardar no Drive ou no Google Fotos.` : ''}
           {' '}A planilha abre no Excel ou no Planilhas Google (só para ver, não restaura).
         </Txt>
 
@@ -124,6 +131,13 @@ export default function Backup() {
             <Txt style={{ flex: 1 }}>{message.text}</Txt>
           </View>
         )}
+
+        <Pressable onPress={() => Linking.openURL(REPO)} accessibilityRole="link" style={({ pressed }) => [s.about, pressed && { opacity: 0.6 }]}>
+          <Icon name="github" size={16} color={colors.faint} />
+          <Txt v="sub" style={{ fontSize: 12 }}>
+            Forja {app.expo.version} · código aberto (MIT) · github.com/Antonio-byte10/forja
+          </Txt>
+        </Pressable>
       </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -137,6 +151,7 @@ const s = StyleSheet.create({
   infoIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
   section: { gap: 10, marginTop: 16 },
   row: { flexDirection: 'row', gap: 10 },
+  about: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 24 },
   input: {
     backgroundColor: colors.surface, color: colors.text, borderRadius: radius.md, padding: 14, minHeight: 120,
     textAlignVertical: 'top', borderWidth: 1, borderColor: colors.line, fontFamily: fonts.body, fontSize: 13,

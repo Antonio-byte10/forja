@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FotosDoTreino } from '@/components/Fotos';
 import { Icon, type IconName } from '@/components/Icon';
 import { MonthCalendar } from '@/components/MonthCalendar';
 import { Button, Card, Txt } from '@/components/ui';
@@ -142,6 +143,7 @@ export default function Historico() {
                       </Pressable>
                     );
                   })}
+                  <FotosDoTreino sessionId={item.id} t={item.startedAt} />
                   <View style={s.actions}>
                     {item.tipo !== 'atividade' && (
                       <Button

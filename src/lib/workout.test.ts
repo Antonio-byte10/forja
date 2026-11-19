@@ -3,7 +3,7 @@ import type { Plan, Session } from './types';
 import {
   addSet, bestWeight, countSets, formatClock, lastSets, nextPlan, parseBackup, parseNumber,
   platesPerSide, removeSet, notasParaFicha, limparNotas, moveExercise, replaceExercise, restoPorLado, sugestaoDeCarga,
-  logFromPlan, recordesDaSessao, evolucao, exerciciosFeitos, seriesPorGrupo, historicoCsv, e1rm, sessionVolume, setVolume, startSession, updateNote, updateSet, usaBarra, volumeChange,
+  logFromPlan, recordesDaSessao, semanasSeguidas, inicioDaSemana, evolucao, exerciciosFeitos, seriesPorGrupo, historicoCsv, e1rm, sessionVolume, setVolume, startSession, updateNote, updateSet, usaBarra, volumeChange,
 } from './workout';
 
 const plan = (id: string, exercises: Plan['exercises'] = []): Plan => ({ id, name: id, title: '', exercises });
@@ -262,4 +262,27 @@ describe('utilitários', () => {
     expect(linhas).toHaveLength(2);
     expect(linhas[1]).toBe('2026-11-05;07:30;Ficha A;"Supino; reto";1;42,5;8;;;banco 4');
   });
+
+  it('semanasSeguidas conta semanas batendo a meta, sem punir a semana atual em andamento', () => {
+    const agora = new Date(2026, 10, 19, 12).getTime(); // quinta
+    const semana = (n: number, dia = 1) => {
+      const d = new Date(inicioDaSemana(agora));
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7 * n + dia, 10).getTime();
+    };
+    const treino = (t: number) => ({ ...session('A'), id: String(t), startedAt: t });
+    // 2 treinos nas 3 semanas anteriores, 1 nesta (meta 2).
+    const h = [semana(0), semana(1), semana(1, 3), semana(2), semana(2, 3), semana(3), semana(3, 3)].map(treino);
+    expect(semanasSeguidas(h, 2, agora)).toBe(3);
+    expect(semanasSeguidas([...h, treino(semana(0, 2))], 2, agora)).toBe(4);
+    // Semana passada sem a meta quebra a sequência.
+    expect(semanasSeguidas(h.filter((s) => s.startedAt !== semana(1, 3)), 2, agora)).toBe(0);
+    expect(semanasSeguidas([], 2, agora)).toBe(0);
+  });
+
+  it('parseBackup aceita peso corporal e ignora valores absurdos', () => {
+    const b = parseBackup(JSON.stringify({ plans: [], history: [], pesos: [{ t: 2, kg: 80 }, { t: 1, kg: 81.5 }, { t: 3, kg: -1 }, { t: 'x', kg: 70 }] }));
+    expect(b.pesos).toEqual([{ t: 1, kg: 81.5 }, { t: 2, kg: 80 }]);
+    expect(parseBackup(JSON.stringify({ plans: [], history: [] }))).not.toHaveProperty('pesos');
+  });
 });
+

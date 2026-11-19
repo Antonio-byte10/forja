@@ -65,7 +65,13 @@ export type Session = {
   nota?: string;
 };
 
-export type Backup = { plans: Plan[]; history: Session[] };
+/** Peso corporal num dia. */
+export type Peso = { t: number; kg: number };
+
+/** Foto de progresso. O arquivo fica na pasta do app; `sessionId` liga a foto ao treino do dia. */
+export type Foto = { id: string; t: number; uri: string; sessionId?: string };
+
+export type Backup = { plans: Plan[]; history: Session[]; pesos?: Peso[] };
 
 /** Preferências que não fazem parte do backup. */
-export type Ajustes = { metaSemanal: number; ultimoBackup?: number };
+export type Ajustes = { metaSemanal: number; ultimoBackup?: number; metaPassos: number; passos?: boolean };

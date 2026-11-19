@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
+import { PassosCard } from '@/components/PassosCard';
 import { Button, Card, ExerciseImage, IconButton, ProgressBar, Txt } from '@/components/ui';
 import { WeekStrip } from '@/components/WeekStrip';
 import { useNow } from '@/lib/platform';
@@ -113,21 +114,6 @@ export default function Home() {
 
       <WeekStrip history={history} />
 
-      {lembrarBackup && (
-        <Pressable
-          onPress={() => router.push('/backup')}
-          accessibilityRole="button"
-          style={({ pressed }) => pressed && s.pressed}
-        >
-          <Card style={s.reminder}>
-            <Icon name="database" size={20} color={colors.accent} />
-            <Txt style={{ flex: 1 }}>
-              {diasSemBackup === undefined ? 'Você ainda não fez backup dos treinos.' : `Último backup há ${diasSemBackup} dias.`}{' '}
-              <Txt style={{ color: colors.accent }}>Fazer agora</Txt>
-            </Txt>
-          </Card>
-        </Pressable>
-      )}
 
       {active ? (
         <ActiveCard session={active} />
@@ -140,6 +126,8 @@ export default function Home() {
           <Button label="Criar ficha" icon="plus" onPress={() => router.push('/ficha/nova')} />
         </Card>
       )}
+
+      {!active && <PassosCard />}
 
       {others.length > 0 && (
         <View style={s.section}>
@@ -171,6 +159,22 @@ export default function Home() {
           <Button small variant="secondary" icon="plus" label="Treino livre" onPress={beginFree} style={{ flex: 1 }} />
           <Button small variant="secondary" icon="timer" label="Registrar atividade" onPress={() => router.push('/atividade')} style={{ flex: 1.3 }} />
         </View>
+      )}
+
+      {lembrarBackup && (
+        <Pressable
+          onPress={() => router.push('/backup')}
+          accessibilityRole="button"
+          style={({ pressed }) => pressed && s.pressed}
+        >
+          <Card style={s.reminder}>
+            <Icon name="database" size={20} color={colors.accent} />
+            <Txt style={{ flex: 1 }}>
+              {diasSemBackup === undefined ? 'Você ainda não fez backup dos treinos.' : `Último backup há ${diasSemBackup} dias.`}{' '}
+              <Txt style={{ color: colors.accent }}>Fazer agora</Txt>
+            </Txt>
+          </Card>
+        </Pressable>
       )}
 
       {last && ultimo && (

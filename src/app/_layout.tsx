@@ -30,6 +30,7 @@ export default function RootLayout() {
         <Stack.Screen name="resumo" options={{ gestureEnabled: false }} />
         <Stack.Screen name="exercicio/[key]" />
         <Stack.Screen name="editar/[id]" />
+        <Stack.Screen name="fotos" />
       </Stack>
     </>
   );

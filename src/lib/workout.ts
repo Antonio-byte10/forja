@@ -1,4 +1,4 @@
-import type { Backup, ExerciseLog, Intensidade, Lugar, Medida, Plan, PlanExercise, Session, SetLog } from './types';
+import type { Backup, ExerciseLog, Intensidade, Lugar, Medida, Peso, Plan, PlanExercise, Session, SetLog } from './types';
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -417,6 +417,36 @@ export const volumeChanges = (history: Session[]): Map<string, number> => {
   return out;
 };
 
+/** Domingo 00:00 da semana de `t`. */
+export const inicioDaSemana = (t: number) => {
+  const d = new Date(t);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()).getTime();
+};
+
+/**
+ * Semanas seguidas batendo a meta de treinos. A semana atual só conta se a meta já foi batida;
+ * se ainda não, a sequência das semanas anteriores continua valendo.
+ */
+export const semanasSeguidas = (history: Session[], meta: number, now = Date.now()) => {
+  if (meta <= 0 || !history.length) return 0;
+  const porSemana = new Map<number, number>();
+  for (const s of history) {
+    const k = inicioDaSemana(s.startedAt);
+    porSemana.set(k, (porSemana.get(k) ?? 0) + 1);
+  }
+  const semana = (n: number) => {
+    const d = new Date(inicioDaSemana(now));
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7 * n).getTime();
+  };
+  let n = (porSemana.get(semana(0)) ?? 0) >= meta ? 0 : 1;
+  let total = 0;
+  while ((porSemana.get(semana(n)) ?? 0) >= meta) {
+    total++;
+    n++;
+  }
+  return total;
+};
+
 /** Treinos, minutos e metros entre duas datas (resumo da semana). */
 export const totals = (history: Session[], from: number, to: number) => {
   const list = history.filter((s) => s.startedAt >= from && s.startedAt < to);
@@ -485,10 +515,17 @@ const cleanSession = (s: Raw): Session => ({
   })),
 });
 
+const cleanPesos = (v: unknown): Peso[] =>
+  rawList(v)
+    .filter((p) => typeof p.t === 'number' && typeof p.kg === 'number' && p.kg > 0 && p.kg < 500)
+    .map((p) => ({ t: p.t as number, kg: p.kg as number }))
+    .sort((a, b) => a.t - b.t);
+
 export const parseBackup = (input: string): Backup => {
   const data: unknown = JSON.parse(input);
   if (!isRaw(data) || !Array.isArray(data.plans) || !Array.isArray(data.history)) throw new Error('Backup inválido');
   return {
+    ...(Array.isArray(data.pesos) && { pesos: cleanPesos(data.pesos) }),
     plans: rawList(data.plans).map(cleanPlan),
     // Mais novo primeiro, como o app espera.
     history: rawList(data.history).map(cleanSession).sort((a, b) => b.startedAt - a.startedAt),

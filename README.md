@@ -37,7 +37,10 @@ Para lançar uma versão nova, aumente `expo.version` e `expo.android.versionCod
 
 ## Estrutura
 
-- `src/app/` — telas (Expo Router): início, treino, fichas, histórico, registrar atividade, backup
+- `src/app/` — telas (Expo Router): início, treino, resumo ao finalizar, fichas, histórico (com edição de treino),
+  progresso (séries por grupo e gráfico por exercício), registrar atividade, backup (arquivo, texto e planilha CSV)
+- `src/lib/avisos.ts` — notificação de fim do descanso (funciona com a tela bloqueada); `avisos.web.ts` é a versão do navegador
+- `src/lib/arquivo.ts` — salvar/abrir arquivo de backup pelo menu de compartilhar; `arquivo.web.ts` baixa no navegador
 - `src/lib/workout.ts` — regras do treino (funções puras, testadas em `workout.test.ts` e `medidas.test.ts`)
 - `src/lib/boneco.ts` — boneco animado: poses (ângulos) viram formas de SVG; `src/components/Boneco.tsx` desenha
 - `src/store.ts` — estado salvo no aparelho (Zustand + AsyncStorage). O treino em andamento fica numa chave

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, NumberInput, ScreenHeader, Txt } from '@/components/ui';
 import type { Intensidade } from '@/lib/types';
@@ -64,7 +64,8 @@ export default function Atividade() {
   return (
     <View style={s.screen}>
       <ScreenHeader kicker="Fora da ficha" title="Registrar atividade" right={<Button small label="Salvar" onPress={salvar} disabled={!titulo || minutos <= 0} />} />
-      <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottom + 32 }]} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottom + 32 }]} keyboardShouldPersistTaps="handled">
         <Txt v="label">O que você fez</Txt>
         <Chips label="Atividade" value={nome} onChange={setNome} options={[...ATIVIDADES, 'Outra'].map((a) => ({ value: a, label: a }))} />
         {nome === 'Outra' && (
@@ -108,6 +109,7 @@ export default function Atividade() {
         />
         <Button label="Salvar no histórico" icon="check" onPress={salvar} disabled={!titulo || minutos <= 0} style={s.gap} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

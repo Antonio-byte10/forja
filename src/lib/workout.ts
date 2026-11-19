@@ -84,20 +84,107 @@ export const lastSets = (history: Session[], key: string): SetLog[] | undefined 
     .map((e) => e.sets.filter((s) => s.done))
     .find((sets) => sets.length > 0);
 
+/** Maior carga já concluída para o exercício no histórico (0 se nunca feito). */
+export const bestWeight = (history: Session[], key: string): number =>
+  history
+    .flatMap((s) => s.exercises)
+    .filter((e) => exerciseKey(e) === key && medidaDe(e) === 'carga')
+    .flatMap((e) => e.sets)
+    .filter((s) => s.done)
+    .reduce((max, s) => Math.max(max, s.weight), 0);
+
+const ANILHAS = [25, 20, 15, 10, 5, 2.5, 1.25];
+
+/** Anilhas padrão de cada lado da barra (descontando a barra de 20 kg). */
+export function platesPerSide(totalKg: number, barKg = 20): number[] {
+  if (!Number.isFinite(totalKg) || totalKg <= barKg) return [];
+  let resto = (totalKg - barKg) / 2;
+  const out: number[] = [];
+  for (const peso of ANILHAS) {
+    while (resto + 1e-6 >= peso) {
+      out.push(peso);
+      resto -= peso;
+    }
+  }
+  return out;
+}
+
+const BARRA_KEYS = new Set([
+  'supino_reto', 'supino_inclinado', 'supino_declinado', 'supino_pegada_aberta', 'supino_fechado',
+  'remada_curvada', 'levantamento_terra', 'remada_supinada', 'encolhimento', 'good_morning', 'rack_pull',
+  'remada_alta', 'desenvolvimento_barra', 'desenvolvimento_militar',
+  'rosca_direta', 'rosca_inversa', 'rosca_spider',
+  'triceps_testa', 'triceps_frances',
+  'rosca_punho', 'rosca_punho_inversa',
+  'agachamento', 'stiff', 'agachamento_frontal', 'afundo_barra', 'terra_romeno', 'terra_sumo',
+  'elevacao_pelvica', 'ponte_gluteo',
+]);
+const BARRA_INCLUI = /\b(barra|supino|agachamento|terra|stiff)\b/i;
+const BARRA_EXCLUI = /\b(halter|halteres|maquina|máquina|cabo|polia|corda|smith|fixa)\b/i;
+
+/** O que sobra de cada lado quando a carga não fecha com as anilhas padrão (ex.: 57 kg → falta 1 kg/lado). */
+export function restoPorLado(totalKg: number, barKg = 20): number {
+  if (!Number.isFinite(totalKg) || totalKg <= barKg) return 0;
+  const usado = platesPerSide(totalKg, barKg).reduce((n, p) => n + p, 0);
+  const resto = (totalKg - barKg) / 2 - usado;
+  return resto > 1e-6 ? Math.round(resto * 100) / 100 : 0;
+}
+
+/** Indica se o exercício usa barra livre (onde faz sentido calcular anilhas por lado). */
+export function usaBarra(e: { catalogKey?: string; name: string; unilateral?: boolean; medida?: Medida }): boolean {
+  if (medidaDe(e) !== 'carga' || e.unilateral) return false;
+  if (e.catalogKey) return BARRA_KEYS.has(e.catalogKey);
+  return BARRA_INCLUI.test(e.name) && !BARRA_EXCLUI.test(e.name);
+}
+
 export const summarizeSets = (sets: SetLog[], medida: Medida = 'carga') => sets.map((s) => formatSet(s, medida)).join(' · ');
 
-/** Exercício da ficha → registro do treino, já preenchido com o que foi feito da última vez. */
-export const logFromPlan = (ex: PlanExercise, history: Session[]): ExerciseLog => {
-  const last = lastSets(history, exerciseKey(ex));
+/** Quanto a carga sobe numa progressão: 1 kg por lado nos unilaterais (halteres), 2,5 kg nos demais. */
+export const incremento = (unilateral: boolean) => (unilateral ? 1 : 2.5);
+
+/**
+ * Progressão dupla: se da última vez todas as séries chegaram ao topo da faixa de repetições
+ * (ou às reps da ficha, sem faixa), sugere subir a carga. Devolve quantos kg somar (0 = manter).
+ */
+export const sugestaoDeCarga = (ex: PlanExercise, last?: SetLog[]): number => {
+  if (medidaDe(ex) !== 'carga' || !last?.length || last.length < ex.sets) return 0;
+  const alvo = Math.max(ex.repsMax ?? 0, ex.reps);
+  const pesado = Math.max(...last.map((s) => s.weight));
+  if (alvo <= 0 || pesado <= 0) return 0;
+  return last.every((s) => s.reps >= alvo) ? incremento(ex.unilateral) : 0;
+};
+
+/** Anotação mais recente do exercício no histórico (a do último treino em que ele apareceu). */
+const ultimaNota = (history: Session[], key: string) =>
+  history.flatMap((s) => s.exercises).find((e) => exerciseKey(e) === key)?.note?.trim() || undefined;
+
+/**
+ * Exercício da ficha → registro do treino, já preenchido com o que foi feito da última vez.
+ * `daFicha`: a anotação vem da ficha (que é atualizada ao finalizar); fora da ficha, do último treino.
+ */
+export const logFromPlan = (ex: PlanExercise, history: Session[], daFicha = false): ExerciseLog => {
+  const key = exerciseKey(ex);
+  const last = lastSets(history, key);
+  const note = daFicha ? ex.note?.trim() || undefined : ex.note?.trim() || ultimaNota(history, key);
   const medida = medidaDe(ex);
+  const subir = sugestaoDeCarga(ex, last);
+  const base = subir ? Math.max(...(last ?? []).map((s) => s.weight)) : 0;
   const sets = Array.from({ length: ex.sets }, (_, i): SetLog => {
     const prev = last?.[Math.min(i, last.length - 1)];
-    const set: SetLog = { weight: prev?.weight ?? ex.weight, reps: prev?.reps ?? ex.reps, done: false };
+    const set: SetLog = subir
+      ? { weight: base + subir, reps: ex.reps, done: false }
+      : { weight: prev?.weight ?? ex.weight, reps: prev?.reps ?? ex.reps, done: false };
     if (porTempo(medida)) set.seconds = prev?.seconds ?? ex.seconds ?? 30;
     if (medida === 'cardio') set.meters = prev?.meters ?? ex.meters ?? 0;
     return set;
   });
-  return { name: ex.name, catalogKey: ex.catalogKey, unilateral: ex.unilateral, sets, ...(ex.medida && { medida: ex.medida }) };
+  return {
+    name: ex.name, catalogKey: ex.catalogKey, unilateral: ex.unilateral, sets,
+    ...(ex.medida && { medida: ex.medida }),
+    ...(ex.restSeconds && { restSeconds: ex.restSeconds }),
+    ...(note && { note }),
+    ...(subir && { progressao: subir }),
+  };
 };
 
 /** Cria o treino a partir da ficha. */
@@ -109,7 +196,7 @@ export const startSession = (plan: Plan, history: Session[], now = Date.now()): 
   planTitle: plan.title,
   ...(plan.lugar && { lugar: plan.lugar }),
   startedAt: now,
-  exercises: plan.exercises.map((ex) => logFromPlan(ex, history)),
+  exercises: plan.exercises.map((ex) => logFromPlan(ex, history, true)),
 });
 
 /** Treino sem ficha: começa vazio e os exercícios entram na hora. */
@@ -137,6 +224,9 @@ const mapExercise = (s: Session, index: number, fn: (e: ExerciseLog) => Exercise
 export const updateSet = (s: Session, ex: number, set: number, patch: Partial<SetLog>) =>
   mapExercise(s, ex, (e) => ({ ...e, sets: e.sets.map((x, i) => (i === set ? { ...x, ...patch } : x)) }));
 
+export const updateNote = (s: Session, ex: number, note: string) =>
+  mapExercise(s, ex, (e) => ({ ...e, note }));
+
 export const addSet = (s: Session, ex: number) =>
   mapExercise(s, ex, (e) => {
     const last = e.sets.at(-1);
@@ -148,6 +238,41 @@ export const removeSet = (s: Session, ex: number) =>
   mapExercise(s, ex, (e) => (e.sets.length > 1 ? { ...e, sets: e.sets.slice(0, -1) } : e));
 
 export const addExercise = (s: Session, e: ExerciseLog): Session => ({ ...s, exercises: [...s.exercises, e] });
+
+/** Muda o exercício de posição (fazer fora da ordem da ficha). */
+export const moveExercise = (s: Session, from: number, to: number): Session => {
+  if (to < 0 || to >= s.exercises.length || from === to) return s;
+  const list = [...s.exercises];
+  const [item] = list.splice(from, 1);
+  list.splice(to, 0, item);
+  return { ...s, exercises: list };
+};
+
+/** Troca um exercício por outro (aparelho ocupado), mantendo a posição. */
+export const replaceExercise = (s: Session, index: number, e: ExerciseLog): Session =>
+  mapExercise(s, index, () => e);
+
+/** Antes de salvar: anotação vazia some (evita texto vazio no histórico) e o resto é aparado. */
+export const limparNotas = (s: Session): Session => ({
+  ...s,
+  exercises: s.exercises.map(({ note, ...e }) => (note?.trim() ? { ...e, note: note.trim() } : e)),
+});
+
+/** O que foi anotado no treino passa para a ficha, para aparecer igual na próxima vez. */
+export const notasParaFicha = (plan: Plan, s: Session): Plan => {
+  const notas = new Map(s.exercises.map((e) => [exerciseKey(e), e.note?.trim() || undefined]));
+  let mudou = false;
+  const exercises = plan.exercises.map((e) => {
+    const key = exerciseKey(e);
+    if (!notas.has(key)) return e;
+    const note = notas.get(key);
+    if ((e.note?.trim() || undefined) === note) return e;
+    mudou = true;
+    const { note: _antiga, ...rest } = e;
+    return note ? { ...rest, note } : rest;
+  });
+  return mudou ? { ...plan, exercises } : plan;
+};
 export const removeExercise = (s: Session, index: number): Session => ({ ...s, exercises: s.exercises.filter((_, i) => i !== index) });
 
 /**
@@ -156,9 +281,106 @@ export const removeExercise = (s: Session, index: number): Session => ({ ...s, e
  */
 export const nextPlan = (plans: Plan[], history: Session[]): Plan | undefined => {
   const gym = plans.filter((p) => p.lugar !== 'casa');
+  if (!gym.length) return undefined;
   const last = history.find((s) => gym.some((p) => p.id === s.planId));
   const i = gym.findIndex((p) => p.id === last?.planId);
   return gym[(i + 1) % gym.length];
+};
+
+/** 1RM estimado (fórmula de Epley). Com 1 repetição, é a própria carga. */
+export const e1rm = (weight: number, reps: number) => (reps <= 1 ? weight : weight * (1 + reps / 30));
+
+/** Recordes de carga batidos numa sessão, comparando com o que veio antes dela. */
+export const recordesDaSessao = (history: Session[], session: Session) => {
+  const antes = history.filter((h) => h.id !== session.id && h.startedAt < session.startedAt);
+  return session.exercises.flatMap((e) => {
+    if (medidaDe(e) !== 'carga') return [];
+    const feitas = e.sets.filter((x) => x.done);
+    if (!feitas.length) return [];
+    const agora = Math.max(...feitas.map((x) => x.weight));
+    const anterior = bestWeight(antes, exerciseKey(e));
+    return anterior > 0 && agora > anterior ? [{ name: e.name, antes: anterior, agora }] : [];
+  });
+};
+
+export type Ponto = { t: number; carga: number; e1rm: number; volume: number };
+
+/** Evolução de um exercício de carga, do treino mais antigo ao mais novo. */
+export const evolucao = (history: Session[], key: string): Ponto[] =>
+  history
+    .flatMap((s) => s.exercises.filter((e) => exerciseKey(e) === key && medidaDe(e) === 'carga').map((e) => ({ s, e })))
+    .flatMap(({ s, e }) => {
+      const feitas = e.sets.filter((x) => x.done && x.weight > 0);
+      if (!feitas.length) return [];
+      return [{
+        t: s.startedAt,
+        carga: Math.max(...feitas.map((x) => x.weight)),
+        e1rm: Math.round(Math.max(...feitas.map((x) => e1rm(x.weight, x.reps))) * 10) / 10,
+        volume: exerciseVolume(e),
+      }];
+    })
+    .reverse();
+
+export type ExercicioFeito = {
+  key: string; name: string; catalogKey?: string; medida: Medida; vezes: number; ultimo: number; recorde: number;
+};
+
+/** Exercícios já feitos, do mais recente ao mais antigo, com quantas vezes e o recorde de carga. */
+export const exerciciosFeitos = (history: Session[]): ExercicioFeito[] => {
+  const out = new Map<string, ExercicioFeito>();
+  for (const s of history) {
+    for (const e of s.exercises) {
+      const feitas = e.sets.filter((x) => x.done);
+      if (!feitas.length) continue;
+      const key = exerciseKey(e);
+      const item = out.get(key) ?? { key, name: e.name, catalogKey: e.catalogKey, medida: medidaDe(e), vezes: 0, ultimo: s.startedAt, recorde: 0 };
+      item.vezes++;
+      if (medidaDe(e) === 'carga') item.recorde = Math.max(item.recorde, ...feitas.map((x) => x.weight));
+      out.set(key, item);
+    }
+  }
+  return [...out.values()];
+};
+
+/** Séries feitas por grupo muscular entre duas datas. `grupo` diz o grupo de cada exercício. */
+export const seriesPorGrupo = (history: Session[], from: number, to: number, grupo: (e: ExerciseLog) => string | undefined) => {
+  const out = new Map<string, number>();
+  for (const s of history) {
+    if (s.startedAt < from || s.startedAt >= to) continue;
+    for (const e of s.exercises) {
+      const g = grupo(e);
+      const n = e.sets.filter((x) => x.done).length;
+      if (g && n) out.set(g, (out.get(g) ?? 0) + n);
+    }
+  }
+  return [...out.entries()].sort((a, b) => b[1] - a[1]);
+};
+
+const dois = (n: number) => String(n).padStart(2, '0');
+
+/** Uma linha por série feita, para abrir no Excel ou no Planilhas (separador ";", vírgula decimal). */
+export const historicoCsv = (history: Session[]) => {
+  const cel = (v: string | number) => {
+    const t = typeof v === 'number' ? String(v).replace('.', ',') : v;
+    return /[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const linhas = [['data', 'hora', 'treino', 'exercicio', 'serie', 'kg', 'reps', 'segundos', 'metros', 'anotacao'].join(';')];
+  for (const s of [...history].reverse()) {
+    const d = new Date(s.startedAt);
+    const data = `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
+    const hora = `${dois(d.getHours())}:${dois(d.getMinutes())}`;
+    const treino = s.tipo === 'atividade' || s.tipo === 'livre' ? s.planTitle : `Ficha ${s.planName}`;
+    if (s.tipo === 'atividade') {
+      linhas.push([data, hora, treino, s.planTitle, 1, '', '', sessionMinutes(s) * 60, s.distanciaM ?? '', s.nota ?? ''].map(cel).join(';'));
+      continue;
+    }
+    for (const e of s.exercises) {
+      e.sets.filter((x) => x.done).forEach((x, i) => {
+        linhas.push([data, hora, treino, e.name, i + 1, x.weight, x.reps, x.seconds ?? '', x.meters ?? '', i === 0 ? e.note ?? '' : ''].map(cel).join(';'));
+      });
+    }
+  }
+  return linhas.join('\n');
 };
 
 export const dayKey = (t: number | Date) => {
@@ -228,9 +450,12 @@ const cleanPlan = (p: Raw): Plan => ({
     catalogKey: typeof e.catalogKey === 'string' ? e.catalogKey : undefined,
     sets: Math.round(count(e.sets, 3)),
     reps: Math.round(count(e.reps, 10)),
+    ...positivo('repsMax', typeof e.repsMax === 'number' ? Math.round(e.repsMax) : undefined),
     weight: count(e.weight, 0),
     unilateral: e.unilateral === true,
     ...medidaDoBackup(e.medida), ...positivo('seconds', e.seconds), ...positivo('meters', e.meters),
+    ...positivo('restSeconds', e.restSeconds),
+    ...(typeof e.note === 'string' && e.note.trim() ? { note: e.note.trim() } : {}),
   })),
 });
 
@@ -251,6 +476,8 @@ const cleanSession = (s: Raw): Session => ({
     catalogKey: typeof e.catalogKey === 'string' ? e.catalogKey : undefined,
     unilateral: e.unilateral === true,
     ...medidaDoBackup(e.medida),
+    ...positivo('restSeconds', e.restSeconds),
+    ...(typeof e.note === 'string' && e.note.trim() ? { note: e.note.trim() } : {}),
     sets: rawList(e.sets).map((x) => ({
       weight: count(x.weight, 0), reps: count(x.reps, 0), done: x.done === true,
       ...positivo('seconds', x.seconds), ...positivo('meters', x.meters),

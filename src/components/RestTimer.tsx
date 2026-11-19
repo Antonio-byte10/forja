@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, Vibration, View } from 'react-native';
+import { agendarAviso, cancelarAviso } from '@/lib/avisos';
 import { useNow } from '@/lib/platform';
 import { formatClock } from '@/lib/workout';
 import { colors, radius } from '@/theme';
@@ -19,9 +20,22 @@ export function RestTimer({ rest, onChange, onEnd, bottom }: {
   onEnd: (rest: Rest) => void;
   bottom: number;
 }) {
-  const now = useNow(250);
+  const now = useNow(250, rest !== undefined);
   const left = rest ? rest.end - now : 0;
   const over = rest !== undefined && left <= 0;
+
+  // Notificação para quando o celular estiver bloqueado ou no bolso; refeita se o tempo mudar.
+  useEffect(() => {
+    if (!rest) return;
+    const id = agendarAviso(
+      (rest.end - Date.now()) / 1000,
+      rest.exec ? `${rest.exec.nome}: tempo!` : 'Fim do descanso',
+      rest.exec ? 'Série concluída.' : 'Hora da próxima série.',
+    );
+    return () => {
+      id.then(cancelarAviso);
+    };
+  }, [rest]);
 
   useEffect(() => {
     if (!over || !rest) return;
@@ -35,14 +49,12 @@ export function RestTimer({ rest, onChange, onEnd, bottom }: {
   return (
     <View style={[s.bar, { bottom }]} accessibilityLiveRegion="polite">
       <ProgressBar value={left / rest.total} style={s.progress} />
+      <View style={s.labelRow}>
+        <Icon name="timer" size={14} color={colors.accent} />
+        <Txt v="label" style={{ color: colors.accent, flexShrink: 1 }} numberOfLines={1}>{rest.exec ? rest.exec.nome : 'Descanso'}</Txt>
+      </View>
       <View style={s.row}>
-        <View style={s.time}>
-          <View style={s.labelRow}>
-            <Icon name="timer" size={14} color={colors.accent} />
-            <Txt v="label" style={{ color: colors.accent, flexShrink: 1 }} numberOfLines={1}>{rest.exec ? rest.exec.nome : 'Descanso'}</Txt>
-          </View>
-          <Txt v="num" style={s.clock}>{formatClock(left)}</Txt>
-        </View>
+        <Txt v="num" style={s.clock}>{formatClock(left)}</Txt>
         <Button small variant="secondary" label="−0:15" onPress={() => shift(-15_000)} />
         <Button small variant="secondary" label="+0:15" onPress={() => shift(15_000)} />
         <Button small label={rest.exec ? 'Feito' : 'Pular'} onPress={() => onEnd(rest)} />
@@ -58,8 +70,7 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12,
   },
   progress: { height: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  time: { flex: 1 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  clock: { fontSize: 36, lineHeight: 40 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  clock: { flex: 1, fontSize: 32, lineHeight: 36 },
 });

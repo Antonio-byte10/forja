@@ -15,12 +15,18 @@ export type PlanExercise = {
   medida?: Medida;
   sets: number;
   reps: number;
+  /** Topo da faixa de repetições (ex.: 8–12 → reps 8, repsMax 12). Ao bater o topo em todas as séries, a carga sobe. */
+  repsMax?: number;
   /** Carga inicial em kg — por lado quando unilateral. */
   weight: number;
   /** Duração planejada de cada série (tempo, cardio e alongamento). */
   seconds?: number;
   /** Distância planejada (cardio). */
   meters?: number;
+  /** Descanso sugerido entre séries, em segundos (padrão: 90). */
+  restSeconds?: number;
+  /** Anotação fixa do exercício (ex.: regulagem do banco). */
+  note?: string;
   unilateral: boolean;
 };
 
@@ -32,6 +38,10 @@ export type ExerciseLog = {
   name: string;
   catalogKey?: string;
   medida?: Medida;
+  restSeconds?: number;
+  note?: string;
+  /** Quantos kg o app somou à carga da última vez (sugestão de progressão), só para mostrar o aviso. */
+  progressao?: number;
   unilateral: boolean;
   sets: SetLog[];
 };
@@ -56,3 +66,6 @@ export type Session = {
 };
 
 export type Backup = { plans: Plan[]; history: Session[] };
+
+/** Preferências que não fazem parte do backup. */
+export type Ajustes = { metaSemanal: number; ultimoBackup?: number };

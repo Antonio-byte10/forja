@@ -92,11 +92,11 @@ export function ProgressBar({ value, style }: { value: number; style?: StyleProp
 }
 
 /** Cabeçalho das telas fora das abas: voltar, título e uma ação. */
-export function ScreenHeader({ title, kicker, right }: { title: string; kicker?: string; right?: ReactNode }) {
+export function ScreenHeader({ title, kicker, right, onBack }: { title: string; kicker?: string; right?: ReactNode; onBack?: () => void }) {
   const { top } = useSafeAreaInsets();
   return (
     <View style={[s.header, { paddingTop: top + 8 }]}>
-      <IconButton icon="chevronLeft" label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} filled />
+      <IconButton icon="chevronLeft" label="Voltar" onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')))} filled />
       <View style={s.headerTitle}>
         {kicker && <Txt v="label">{kicker}</Txt>}
         <Txt v="h2" numberOfLines={1}>{title}</Txt>

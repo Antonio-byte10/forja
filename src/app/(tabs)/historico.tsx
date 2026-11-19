@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +8,7 @@ import { Button, Card, Txt } from '@/components/ui';
 import { confirm } from '@/lib/platform';
 import type { Session } from '@/lib/types';
 import {
-  countSets, dayKey, exerciseVolume, formatKg, formatKm, medidaDe, pace, resumo, sessionMeters, sessionMinutes, summarizeSets, volumeChanges,
+  countSets, dayKey, exerciseKey, exerciseVolume, formatKg, formatKm, medidaDe, pace, resumo, sessionMeters, sessionMinutes, summarizeSets, volumeChanges,
 } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
@@ -125,16 +126,34 @@ export default function Historico() {
                     if (!done.length) return null;
                     const medida = medidaDe(ex);
                     return (
-                      <View key={i} style={s.exercise}>
+                      <Pressable
+                        key={i}
+                        onPress={() => router.push({ pathname: '/exercicio/[key]', params: { key: exerciseKey(ex) } })}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Evolução de ${ex.name}`}
+                        style={({ pressed }) => [s.exercise, pressed && s.pressed]}
+                      >
                         <View style={s.exRow}>
                           <Txt style={s.exName} numberOfLines={1}>{ex.name}</Txt>
                           {medida === 'carga' && <Txt v="sub">{formatKg(exerciseVolume(ex))} kg</Txt>}
                         </View>
                         <Txt v="sub">{summarizeSets(done, medida)}{medida === 'carga' && ex.unilateral ? ' (por lado)' : ''}</Txt>
-                      </View>
+                        {ex.note?.trim() ? <Txt v="sub" style={s.exNote}>{ex.note.trim()}</Txt> : null}
+                      </Pressable>
                     );
                   })}
-                  <Button small variant="danger" icon="trash" label="Apagar" onPress={remove} style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} />
+                  <View style={s.actions}>
+                    {item.tipo !== 'atividade' && (
+                      <Button
+                        small
+                        variant="secondary"
+                        icon="pencil"
+                        label="Editar"
+                        onPress={() => router.push({ pathname: '/editar/[id]', params: { id: item.id } })}
+                      />
+                    )}
+                    <Button small variant="danger" icon="trash" label="Apagar" onPress={remove} />
+                  </View>
                 </View>
               )}
             </View>
@@ -164,4 +183,6 @@ const s = StyleSheet.create({
   exercise: { gap: 2 },
   exRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   exName: { fontFamily: fonts.semibold, flexShrink: 1 },
+  exNote: { color: colors.faint, fontStyle: 'italic' },
+  actions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
 });

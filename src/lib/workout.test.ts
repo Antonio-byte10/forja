@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Plan, Session } from './types';
 import {
-  addSet, countSets, formatClock, lastSets, nextPlan, parseBackup, parseNumber,
-  removeSet, sessionVolume, setVolume, startSession, updateSet, volumeChange,
+  addSet, bestWeight, countSets, formatClock, lastSets, nextPlan, parseBackup, parseNumber,
+  platesPerSide, removeSet, notasParaFicha, limparNotas, moveExercise, replaceExercise, restoPorLado, sugestaoDeCarga,
+  logFromPlan, recordesDaSessao, evolucao, exerciciosFeitos, seriesPorGrupo, historicoCsv, e1rm, sessionVolume, setVolume, startSession, updateNote, updateSet, usaBarra, volumeChange,
 } from './workout';
 
 const plan = (id: string, exercises: Plan['exercises'] = []): Plan => ({ id, name: id, title: '', exercises });
@@ -143,5 +144,122 @@ describe('utilitários', () => {
     expect(volumeChange(history, history[0])).toBe(10);
     expect(volumeChange(history, history[1])).toBeUndefined();
     expect(volumeChange(history, history[2])).toBeUndefined();
+  });
+
+  it('platesPerSide calcula anilhas padrão por lado descontando a barra', () => {
+    expect(platesPerSide(60)).toEqual([20]);
+    expect(platesPerSide(55)).toEqual([15, 2.5]);
+    expect(platesPerSide(20)).toEqual([]);
+    expect(platesPerSide(15)).toEqual([]);
+  });
+
+  it('bestWeight considera apenas séries concluídas de carga', () => {
+    const history = [
+      session('A', [{ name: 'Supino', catalogKey: 'supino_reto', unilateral: false, sets: [
+        { weight: 80, reps: 5, done: false },
+        { weight: 65, reps: 8, done: true },
+      ] }]),
+      session('A', [{ name: 'Supino', catalogKey: 'supino_reto', unilateral: false, sets: [
+        { weight: 70, reps: 6, done: true },
+      ] }]),
+    ];
+    expect(bestWeight(history, 'supino_reto')).toBe(70);
+    expect(bestWeight(history, 'agachamento')).toBe(0);
+  });
+
+  it('preserva descanso por exercício e anotação em logFromPlan, updateNote e parseBackup', () => {
+    const comExtras = { ...supino, restSeconds: 120, note: 'banco 4' };
+    const s0 = startSession(plan('A', [comExtras]), []);
+    expect(s0.exercises[0]).toMatchObject({ restSeconds: 120, note: 'banco 4' });
+
+    const editada = updateNote(s0, 0, 'pegada fechada');
+    const history = [{ ...editada, finishedAt: 10 }];
+    // Da ficha: vale a anotação da ficha (que é atualizada ao finalizar, ver notasParaFicha).
+    expect(startSession(plan('A', [comExtras]), history).exercises[0].note).toBe('banco 4');
+    expect(startSession(notasParaFicha(plan('A', [comExtras]), editada), history).exercises[0].note).toBe('pegada fechada');
+
+    const volta = parseBackup(JSON.stringify({ plans: [plan('A', [comExtras])], history }));
+    expect(volta.plans[0].exercises[0]).toMatchObject({ restSeconds: 120, note: 'banco 4' });
+    expect(volta.history[0].exercises[0]).toMatchObject({ restSeconds: 120, note: 'pegada fechada' });
+  });
+
+  it('usaBarra diferencia barra livre de máquinas, polias e halteres', () => {
+    expect(usaBarra({ name: 'Supino reto', catalogKey: 'supino_reto', unilateral: false })).toBe(true);
+    expect(usaBarra({ name: 'Agachamento livre', catalogKey: 'agachamento', unilateral: false })).toBe(true);
+    expect(usaBarra({ name: 'Supino com barra', unilateral: false })).toBe(true);
+    expect(usaBarra({ name: 'Puxada frente aberta', catalogKey: 'puxada_frente', unilateral: false })).toBe(false);
+    expect(usaBarra({ name: 'Leg press', catalogKey: 'leg_press', unilateral: false })).toBe(false);
+    expect(usaBarra({ name: 'Cadeira extensora', catalogKey: 'cadeira_extensora', unilateral: false })).toBe(false);
+    expect(usaBarra({ name: 'Supino com halteres', catalogKey: 'supino_halter', unilateral: true })).toBe(false);
+    expect(usaBarra({ name: 'Supino no Smith', unilateral: false })).toBe(false);
+  });
+
+  it('restoPorLado avisa o que não fecha com as anilhas', () => {
+    expect(restoPorLado(60)).toBe(0);
+    expect(restoPorLado(57)).toBe(1);
+    expect(restoPorLado(61)).toBe(0.5);
+    expect(restoPorLado(15)).toBe(0);
+  });
+
+  it('limparNotas tira anotação vazia (evita texto solto que fecha o app no Android)', () => {
+    const s0 = session('A', [{ name: 'Supino', unilateral: false, note: '   ', sets: [{ weight: 10, reps: 5, done: true }] }]);
+    expect(limparNotas(s0).exercises[0]).not.toHaveProperty('note');
+    const s1 = updateNote(s0, 0, '  banco 4 ');
+    expect(limparNotas(s1).exercises[0].note).toBe('banco 4');
+  });
+
+  it('notasParaFicha leva a anotação do treino para a ficha e apaga quando o treino apagou', () => {
+    const p = plan('A', [{ ...supino, note: 'velha' }]);
+    const s0 = startSession(p, []);
+    expect(notasParaFicha(p, updateNote(s0, 0, 'nova')).exercises[0].note).toBe('nova');
+    expect(notasParaFicha(p, updateNote(s0, 0, '')).exercises[0]).not.toHaveProperty('note');
+    expect(notasParaFicha(p, s0)).toBe(p);
+  });
+
+  it('sugestaoDeCarga sobe a carga quando bateu o topo da faixa em todas as séries', () => {
+    const ex = { ...supino, sets: 3, reps: 8, repsMax: 12 };
+    const bateu = [{ weight: 60, reps: 12, done: true }, { weight: 60, reps: 12, done: true }, { weight: 60, reps: 12, done: true }];
+    expect(sugestaoDeCarga(ex, bateu)).toBe(2.5);
+    expect(sugestaoDeCarga({ ...ex, unilateral: true }, bateu)).toBe(1);
+    expect(sugestaoDeCarga(ex, [...bateu.slice(0, 2), { weight: 60, reps: 10, done: true }])).toBe(0);
+    expect(sugestaoDeCarga(ex, bateu.slice(0, 2))).toBe(0);
+    expect(sugestaoDeCarga(ex, undefined)).toBe(0);
+
+    const history = [session('A', [{ name: ex.name, catalogKey: ex.catalogKey, unilateral: false, sets: bateu }])];
+    const log = logFromPlan(ex, history, true);
+    expect(log.progressao).toBe(2.5);
+    expect(log.sets.every((x) => x.weight === 62.5 && x.reps === 8)).toBe(true);
+  });
+
+  it('moveExercise e replaceExercise mexem só na ordem e no item escolhido', () => {
+    const s0 = startSession(plan('A', [supino, { ...supino, id: 'x', name: 'Remada', catalogKey: 'remada' }]), []);
+    const movido = moveExercise(s0, 1, 0);
+    expect(movido.exercises.map((e) => e.name)).toEqual(['Remada', s0.exercises[0].name]);
+    expect(moveExercise(s0, 0, -1)).toBe(s0);
+    const trocado = replaceExercise(s0, 0, { name: 'Supino máquina', unilateral: false, sets: [] });
+    expect(trocado.exercises[0].name).toBe('Supino máquina');
+    expect(trocado.exercises[1]).toBe(s0.exercises[1]);
+  });
+
+  it('recordes, evolução, exercícios feitos e séries por grupo', () => {
+    const ex = (w: number, reps = 5) => [{ name: 'Supino', catalogKey: 'supino_reto', unilateral: false, sets: [{ weight: w, reps, done: true }] }];
+    const antiga = { ...session('A', ex(60)), id: 'a', startedAt: 1000 };
+    const nova = { ...session('A', ex(70)), id: 'b', startedAt: 2000 };
+    const history = [nova, antiga];
+    expect(recordesDaSessao(history, nova)).toEqual([{ name: 'Supino', antes: 60, agora: 70 }]);
+    expect(recordesDaSessao(history, antiga)).toEqual([]);
+    expect(evolucao(history, 'supino_reto').map((p) => p.carga)).toEqual([60, 70]);
+    expect(e1rm(100, 1)).toBe(100);
+    expect(Math.round(e1rm(100, 10))).toBe(133);
+    expect(exerciciosFeitos(history)).toMatchObject([{ key: 'supino_reto', vezes: 2, recorde: 70, ultimo: 2000 }]);
+    expect(seriesPorGrupo(history, 0, 3000, () => 'Peito')).toEqual([['Peito', 2]]);
+    expect(seriesPorGrupo(history, 1500, 3000, () => 'Peito')).toEqual([['Peito', 1]]);
+  });
+
+  it('historicoCsv gera uma linha por série com vírgula decimal', () => {
+    const s0 = { ...session('A', [{ name: 'Supino; reto', unilateral: false, note: 'banco 4', sets: [{ weight: 42.5, reps: 8, done: true }, { weight: 40, reps: 8, done: false }] }]), startedAt: new Date(2026, 10, 5, 7, 30).getTime() };
+    const linhas = historicoCsv([s0]).split('\n');
+    expect(linhas).toHaveLength(2);
+    expect(linhas[1]).toBe('2026-11-05;07:30;Ficha A;"Supino; reto";1;42,5;8;;;banco 4');
   });
 });

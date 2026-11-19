@@ -27,6 +27,9 @@ export default function RootLayout() {
         <Stack.Screen name="ficha/[id]" />
         <Stack.Screen name="backup" />
         <Stack.Screen name="atividade" />
+        <Stack.Screen name="resumo" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="exercicio/[key]" />
+        <Stack.Screen name="editar/[id]" />
       </Stack>
     </>
   );

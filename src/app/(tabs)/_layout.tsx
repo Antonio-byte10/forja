@@ -27,6 +27,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={tab('Início', 'home')} />
       <Tabs.Screen name="fichas" options={tab('Fichas', 'list')} />
       <Tabs.Screen name="historico" options={tab('Histórico', 'history')} />
+      <Tabs.Screen name="progresso" options={tab('Progresso', 'chart')} />
     </Tabs>
   );
 }

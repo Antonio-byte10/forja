@@ -1,20 +1,22 @@
 import { Redirect, router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCard } from '@/components/ExerciseCard';
 import { ExercisePicker } from '@/components/ExercisePicker';
 import { RestTimer, type Rest } from '@/components/RestTimer';
 import { Button, Card, ProgressBar, ScreenHeader, Txt } from '@/components/ui';
+import { prepararAvisos } from '@/lib/avisos';
 import { confirm, useNow } from '@/lib/platform';
 import type { Session } from '@/lib/types';
 import {
-  countSets, exerciseKey, formatClock, formatKg, formatSeconds, lastSets, medidaDe, sessionReps, sessionSeconds, sessionVolume,
+  bestWeight, countSets, exerciseKey, formatClock, formatKg, formatSeconds, lastSets, medidaDe, sessionReps, sessionSeconds, sessionVolume,
 } from '@/lib/workout';
 import { useActive, useStore } from '@/store';
 import { colors } from '@/theme';
 
-const REST_MS = 90_000;
+const DEFAULT_REST_S = 90;
 
 /** O número do meio muda com o tipo de treino: kg na musculação, repetições ou tempo no peso do corpo. */
 function destaque(session: Session): [string, string] {
@@ -49,20 +51,46 @@ function Stats({ session }: { session: Session }) {
 export default function Treino() {
   const history = useStore((st) => st.history);
   const active = useActive((st) => st.active);
-  const { updateSet, addSet, removeSet, addExercise, removeExercise, finish, discard } = useActive.getState();
+  const { updateSet, updateNote, addSet, removeSet, addExercise, replaceExercise, finish, discard } = useActive.getState();
   const [rest, setRest] = useState<Rest>();
-  const [picking, setPicking] = useState(false);
+  // Escolhendo exercício: 'novo' adiciona; um número troca o exercício daquela posição.
+  const [picking, setPicking] = useState<'novo' | number>();
   const { bottom } = useSafeAreaInsets();
 
-  // "Última" de cada exercício: o histórico não muda durante o treino, então calcula uma vez só.
-  const chaves = active?.exercises.map(exerciseKey).join('|') ?? '';
-  const ultimas = useMemo(() => (chaves ? chaves.split('|').map((k) => lastSets(history, k)) : []), [chaves, history]);
+  // A tela não apaga entre as séries, e o aviso de fim do descanso já pede permissão no primeiro treino.
+  useEffect(() => {
+    prepararAvisos();
+    // Se não der para manter acesa (alguns navegadores), o treino segue normal.
+    activateKeepAwakeAsync('treino').catch(() => {});
+    return () => {
+      deactivateKeepAwake('treino').catch(() => {});
+    };
+  }, []);
+
+  const onMove = useCallback((ex: number, delta: number) => useActive.getState().moveExercise(ex, ex + delta), []);
+  const onSwap = useCallback((ex: number) => setPicking(ex), []);
+  const onRemove = useCallback(async (ex: number) => {
+    const nome = useActive.getState().active?.exercises[ex]?.name ?? 'exercício';
+    if (await confirm(`Tirar ${nome} do treino?`, 'A ficha não muda.', 'Tirar')) useActive.getState().removeExercise(ex);
+  }, []);
+
+  // "Última" e recorde de cada exercício: o histórico não muda durante o treino, então calcula uma vez só.
+  const chaves = active?.exercises.map(exerciseKey).join('\0') ?? '';
+  const { ultimas, recordes } = useMemo(() => {
+    const keys = chaves ? chaves.split('\0') : [];
+    return {
+      ultimas: keys.map((k) => lastSets(history, k)),
+      recordes: keys.map((k) => bestWeight(history, k)),
+    };
+  }, [chaves, history]);
 
   const onToggle = useCallback((ex: number, set: number, done: boolean) => {
-    const medida = medidaDe(useActive.getState().active?.exercises[ex] ?? {});
+    const exercicio = useActive.getState().active?.exercises[ex];
+    const medida = medidaDe(exercicio ?? {});
+    const restMs = (exercicio?.restSeconds ?? DEFAULT_REST_S) * 1000;
     useActive.getState().updateSet(ex, set, { done });
     // Alongamento e cardio não pedem descanso depois.
-    setRest(done && medida !== 'alongamento' && medida !== 'cardio' ? { end: Date.now() + REST_MS, total: REST_MS } : undefined);
+    setRest(done && medida !== 'alongamento' && medida !== 'cardio' ? { end: Date.now() + restMs, total: restMs } : undefined);
   }, []);
 
   const onTimer = useCallback((ex: number, set: number) => {
@@ -81,6 +109,7 @@ export default function Treino() {
 
   const current = active.exercises.findIndex((e) => e.sets.some((x) => !x.done));
   const livre = active.tipo === 'livre';
+  const trocando = typeof picking === 'number' ? active.exercises[picking] : undefined;
 
   const onFinish = async () => {
     const { done } = countSets(active);
@@ -91,9 +120,13 @@ export default function Treino() {
       'Finalizar',
     );
     if (!ok) return;
-    router.replace('/');
-    if (done) finish();
-    else discard();
+    if (done) {
+      router.replace({ pathname: '/resumo', params: { id: active.id } });
+      finish();
+    } else {
+      router.replace('/');
+      discard();
+    }
   };
 
   const onDiscard = async () => {
@@ -109,11 +142,12 @@ export default function Treino() {
         title={active.planTitle || 'Treino'}
         right={<Button small label="Finalizar" onPress={onFinish} />}
       />
-      <ScrollView
-        contentContainerStyle={[s.content, { paddingBottom: bottom + (rest ? 150 : 32) }]}
-        keyboardShouldPersistTaps="handled"
-        stickyHeaderIndices={[0]}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          contentContainerStyle={[s.content, { paddingBottom: bottom + (rest ? 150 : 32) }]}
+          keyboardShouldPersistTaps="handled"
+          stickyHeaderIndices={[0]}
+        >
         <Stats session={active} />
         {active.exercises.length === 0 && (
           <Card style={{ gap: 6 }}>
@@ -127,21 +161,33 @@ export default function Treino() {
             index={i}
             exercise={ex}
             last={ultimas[i]}
+            bestWeight={recordes[i]}
+            total={active.exercises.length}
+            onMove={onMove}
+            onSwap={onSwap}
             current={i === current}
             onChange={updateSet}
+            onNote={updateNote}
             onToggle={onToggle}
             onTimer={onTimer}
             onAddSet={addSet}
             onRemoveSet={removeSet}
-            onRemove={livre ? removeExercise : undefined}
+            onRemove={onRemove}
           />
         ))}
-        <Button variant="ghost" icon="plus" label="Adicionar exercício" onPress={() => setPicking(true)} />
+        <Button variant="ghost" icon="plus" label="Adicionar exercício" onPress={() => setPicking('novo')} />
         {current === -1 && active.exercises.length > 0 && <Button label="Finalizar treino" icon="check" onPress={onFinish} />}
         <Button variant="danger" icon="trash" label="Descartar treino" onPress={onDiscard} />
       </ScrollView>
+      </KeyboardAvoidingView>
       <RestTimer rest={rest} onChange={setRest} onEnd={onEnd} bottom={bottom + 12} />
-      <ExercisePicker visible={picking} onClose={() => setPicking(false)} onPick={addExercise} />
+      <ExercisePicker
+        visible={picking !== undefined}
+        title={trocando ? `Trocar ${trocando.name}` : undefined}
+        similarTo={trocando?.catalogKey}
+        onClose={() => setPicking(undefined)}
+        onPick={(ex) => (typeof picking === 'number' ? replaceExercise(picking, ex) : addExercise(ex))}
+      />
     </View>
   );
 }

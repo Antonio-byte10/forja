@@ -78,7 +78,9 @@ function NextCard({ plan, onStart }: { plan: Plan; onStart: () => void }) {
 export default function Home() {
   const plans = useStore((s) => s.plans);
   const history = useStore((s) => s.history);
-  const { active, start, startFree } = useActive();
+  const active = useActive((s) => s.active);
+  const ultimoBackup = useStore((s) => s.ajustes.ultimoBackup);
+  const { start, startFree } = useActive.getState();
   const { top } = useSafeAreaInsets();
   const next = nextPlan(plans, history);
   const last = history[0];
@@ -95,6 +97,9 @@ export default function Home() {
     router.push('/treino');
   };
   const ultimo = last ? resumo(last) : undefined;
+  // Lembrete: nunca fez backup e já tem alguns treinos, ou o último backup tem mais de 30 dias.
+  const diasSemBackup = ultimoBackup ? Math.floor((now.getTime() - ultimoBackup) / 86_400_000) : undefined;
+  const lembrarBackup = !active && (diasSemBackup === undefined ? history.length >= 5 : diasSemBackup >= 30);
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: top + 16 }]}>
@@ -107,6 +112,22 @@ export default function Home() {
       </View>
 
       <WeekStrip history={history} />
+
+      {lembrarBackup && (
+        <Pressable
+          onPress={() => router.push('/backup')}
+          accessibilityRole="button"
+          style={({ pressed }) => pressed && s.pressed}
+        >
+          <Card style={s.reminder}>
+            <Icon name="database" size={20} color={colors.accent} />
+            <Txt style={{ flex: 1 }}>
+              {diasSemBackup === undefined ? 'Você ainda não fez backup dos treinos.' : `Último backup há ${diasSemBackup} dias.`}{' '}
+              <Txt style={{ color: colors.accent }}>Fazer agora</Txt>
+            </Txt>
+          </Card>
+        </Pressable>
+      )}
 
       {active ? (
         <ActiveCard session={active} />
@@ -204,6 +225,7 @@ const s = StyleSheet.create({
   otherTitle: { minHeight: 48 },
   otherFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   last: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  reminder: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.accent, backgroundColor: colors.accentSoft },
   lastIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
   trend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontFamily: fonts.semibold, fontSize: 13 },

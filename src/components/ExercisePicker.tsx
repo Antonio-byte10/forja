@@ -13,12 +13,26 @@ const normalize = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLo
 
 const ROTULO = { carga: 'carga', reps: 'peso do corpo', tempo: 'por tempo', cardio: 'tempo e distância', alongamento: 'por tempo' };
 
-type Props = { visible: boolean; onClose: () => void; onPick: (exercise: PlanExercise) => void };
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  onPick: (exercise: PlanExercise) => void;
+  /** Título no lugar de "Adicionar exercício" (ex.: ao trocar). */
+  title?: string;
+  /** Abre já filtrado pelo grupo desse exercício do catálogo (ao trocar, mostra os parecidos). */
+  similarTo?: string;
+};
 
 /** Escolhe um exercício do catálogo ou cria um com nome próprio. */
-export function ExercisePicker({ visible, onClose, onPick }: Props) {
+export function ExercisePicker({ visible, onClose, onPick, title, similarTo }: Props) {
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<MuscleGroup>();
+  // Ao abrir, começa no grupo do exercício que está sendo trocado (ou em todos).
+  const [aberto, setAberto] = useState(false);
+  if (visible !== aberto) {
+    setAberto(visible);
+    if (visible) setGroup(similarTo ? catalog[similarTo]?.group : undefined);
+  }
   const filtered = items.filter((i) => (!group || i.group === group) && normalize(i.name).includes(normalize(query)));
   const typed = query.trim();
 
@@ -41,7 +55,7 @@ export function ExercisePicker({ visible, onClose, onPick }: Props) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={s.screen}>
         <View style={s.top}>
-          <Txt v="title" style={{ flex: 1 }}>Adicionar exercício</Txt>
+          <Txt v="title" style={{ flex: 1 }} numberOfLines={2}>{title ?? 'Adicionar exercício'}</Txt>
           <IconButton icon="x" label="Fechar" onPress={onClose} filled />
         </View>
         <View style={s.search}>

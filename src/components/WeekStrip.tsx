@@ -1,9 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { Session } from '@/lib/types';
 import { dayKey, totals } from '@/lib/workout';
 import { colors, fonts } from '@/theme';
 import { Icon } from './Icon';
-import { Card, Txt } from './ui';
+import { useStore } from '@/store';
+import { Card, IconButton, ProgressBar, Txt } from './ui';
 
 const LETTERS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
@@ -14,15 +16,33 @@ export function WeekStrip({ history }: { history: Session[] }) {
   const days = Array.from({ length: 7 }, (_, i) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + i));
   // Conta treinos (dois no mesmo dia valem dois) e o tempo somado da semana.
   const { sessions: count, minutes } = totals(history, days[0].getTime(), days[6].getTime() + 86_400_000);
+  const meta = useStore((st) => st.ajustes.metaSemanal);
+  const [editando, setEditando] = useState(false);
+  const mudarMeta = (n: number) => useStore.getState().setAjustes({ metaSemanal: Math.min(14, Math.max(1, n)) });
 
   return (
     <Card style={s.card}>
       <View style={s.head}>
         <Txt v="label">Esta semana</Txt>
-        <Txt v="label" style={{ color: count ? colors.accent : colors.faint }}>
-          {count === 1 ? '1 treino' : `${count} treinos`}{minutes ? ` · ${minutes} min` : ''}
-        </Txt>
+        <Pressable
+          onPress={() => setEditando((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={`${count} de ${meta} treinos na semana. Toque para mudar a meta.`}
+          hitSlop={8}
+        >
+          <Txt v="label" style={{ color: count >= meta ? colors.up : count ? colors.accent : colors.faint }}>
+            {count}/{meta} treinos{minutes ? ` · ${minutes} min` : ''}
+          </Txt>
+        </Pressable>
       </View>
+      {editando && (
+        <View style={s.meta}>
+          <Txt v="sub" style={{ flex: 1 }}>Meta: treinos por semana</Txt>
+          <IconButton icon="minus" label="Diminuir meta" onPress={() => mudarMeta(meta - 1)} disabled={meta <= 1} size={36} filled />
+          <Txt v="num" style={{ minWidth: 28, textAlign: 'center' }}>{meta}</Txt>
+          <IconButton icon="plus" label="Aumentar meta" onPress={() => mudarMeta(meta + 1)} disabled={meta >= 14} size={36} filled />
+        </View>
+      )}
       <View style={s.row}>
         {days.map((d, i) => {
           const done = trained.has(dayKey(d));
@@ -42,6 +62,7 @@ export function WeekStrip({ history }: { history: Session[] }) {
           );
         })}
       </View>
+      <ProgressBar value={count / meta} style={s.progress} />
     </Card>
   );
 }
@@ -56,4 +77,6 @@ const s = StyleSheet.create({
   done: { backgroundColor: colors.accent },
   today: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.accent },
   num: { fontFamily: fonts.semibold, fontSize: 14 },
+  progress: { height: 4 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

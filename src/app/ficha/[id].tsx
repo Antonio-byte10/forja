@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExercisePicker } from '@/components/ExercisePicker';
 import { Button, Card, ExerciseImage, IconButton, NumberInput, ScreenHeader, Stepper, Txt } from '@/components/ui';
@@ -16,6 +16,12 @@ const freeLetter = (plans: Plan[]) =>
 
 const MEDIDAS: [Medida, string][] = [['carga', 'Carga'], ['reps', 'Só reps'], ['tempo', 'Tempo'], ['cardio', 'Cardio'], ['alongamento', 'Alongar']];
 const LUGARES: [Lugar, string][] = [['academia', 'Academia'], ['casa', 'Casa']];
+const DESCANSOS: [string, string][] = [['60', '60 s'], ['90', '90 s'], ['120', '2 min'], ['180', '3 min']];
+/** As opções fixas, mais o valor atual se vier de outro lugar (ex.: backup com 150 s). */
+const descansos = (atual: number): [string, string][] =>
+  DESCANSOS.some(([v]) => Number(v) === atual) ? DESCANSOS : [...DESCANSOS, [String(atual), `${atual} s`]];
+/** Topo da faixa de repetições: "Fixo" ou até +2, +4, +6 acima do mínimo. */
+const faixas = (reps: number): [string, string][] => [['0', 'Fixo'], ...[2, 4, 6].map((d): [string, string] => [String(reps + d), `${reps}–${reps + d}`])];
 
 function Opcoes<T extends string>({ options, value, onChange, label }: { options: [T, string][]; value: T; onChange: (v: T) => void; label: string }) {
   return (
@@ -57,15 +63,46 @@ export default function EditarFicha() {
       return next;
     });
 
+  const back = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
+
+  /** Ficha pronta para salvar: anotação vazia some e a faixa de reps só fica se for acima do mínimo. */
+  const limpa = (p: Plan): Plan => ({
+    ...p,
+    name: p.name.trim() || '?',
+    title: p.title.trim(),
+    exercises: p.exercises.map(({ note, repsMax, ...e }) => ({
+      ...e,
+      ...(note?.trim() ? { note: note.trim() } : {}),
+      ...(repsMax && repsMax > e.reps ? { repsMax } : {}),
+    })),
+  });
+
   const save = () => {
-    savePlan({ ...plan, name: plan.name.trim() || '?', title: plan.title.trim() });
-    router.back();
+    savePlan(limpa(plan));
+    back();
+  };
+
+  // Salva a ficha atual (com o que foi mudado) e cria a cópia.
+  const duplicate = () => {
+    const atual = limpa(plan);
+    savePlan(atual);
+    savePlan({
+      ...atual,
+      id: uid(),
+      name: freeLetter([...plans.filter((p) => p.id !== atual.id), atual]),
+      title: atual.title ? `${atual.title} (cópia)` : `Cópia ${atual.name}`,
+      exercises: atual.exercises.map((e) => ({ ...e, id: uid() })),
+    });
+    back();
   };
 
   const remove = async () => {
     if (!(await confirm(`Apagar a ficha ${plan.name}?`, 'O histórico dos treinos continua salvo.', 'Apagar'))) return;
     deletePlan(plan.id);
-    router.back();
+    back();
   };
 
   return (
@@ -75,7 +112,8 @@ export default function EditarFicha() {
         title={plan.title || `Ficha ${plan.name}`}
         right={<Button small label="Salvar" onPress={save} />}
       />
-      <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottom + 32 }]} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottom + 32 }]} keyboardShouldPersistTaps="handled">
         <View style={s.names}>
           <View style={s.field}>
             <Txt v="label">Letra</Txt>
@@ -152,10 +190,29 @@ export default function EditarFicha() {
                 </View>
               ) : (
                 <View style={{ flex: 1 }}>
-                  <Stepper label="Reps" value={ex.reps} onChange={(reps) => patch(i, { reps })} />
+                  <Stepper
+                    label={ex.repsMax && ex.repsMax > ex.reps ? 'Reps mín.' : 'Reps'}
+                    value={ex.reps}
+                    onChange={(reps) => patch(i, { reps, ...(ex.repsMax && ex.repsMax > ex.reps && { repsMax: ex.repsMax + (reps - ex.reps) }) })}
+                  />
                 </View>
               )}
             </View>
+            {medidaDe(ex) === 'carga' && (
+              <View style={s.field}>
+                <Txt v="label">Faixa de repetições</Txt>
+                <Opcoes
+                  label={`${ex.name}: faixa de repetições`}
+                  options={faixas(ex.reps)}
+                  value={String(ex.repsMax && ex.repsMax > ex.reps ? ex.repsMax : 0)}
+                  onChange={(v) => patch(i, { repsMax: Number(v) || undefined })}
+                />
+                <Txt v="sub" style={{ fontSize: 12 }}>
+                  Quando você fizer {ex.repsMax && ex.repsMax > ex.reps ? ex.repsMax : ex.reps} reps em todas as séries, o app sugere
+                  +{ex.unilateral ? '1 kg/lado' : '2,5 kg'} no próximo treino.
+                </Txt>
+              </View>
+            )}
             {medidaDe(ex) === 'carga' && (
               <>
                 <View style={s.weightRow}>
@@ -182,12 +239,34 @@ export default function EditarFicha() {
                 </View>
               </>
             )}
+            {medidaDe(ex) !== 'alongamento' && medidaDe(ex) !== 'cardio' && (
+              <View style={s.field}>
+                <Txt v="label">Descanso entre séries</Txt>
+                <Opcoes
+                  label={`${ex.name}: descanso entre séries`}
+                  options={descansos(ex.restSeconds ?? 90)}
+                  value={String(ex.restSeconds ?? 90)}
+                  onChange={(v) => patch(i, { restSeconds: Number(v) })}
+                />
+              </View>
+            )}
+            <TextInput
+              value={ex.note ?? ''}
+              onChangeText={(note) => patch(i, { note })}
+              placeholder="Anotação (ex.: aparelho 3, banco 4)"
+              placeholderTextColor={colors.faint}
+              style={s.noteInput}
+              accessibilityLabel={`${ex.name}: anotação`}
+            />
           </Card>
         ))}
 
         <Button variant="ghost" icon="plus" label="Adicionar exercício" onPress={() => setPicking(true)} />
+        <Button icon="check" label="Salvar ficha" onPress={save} />
+        {saved && <Button variant="secondary" icon="copy" label="Duplicar ficha" onPress={duplicate} />}
         {saved && <Button variant="danger" icon="trash" label="Apagar ficha" onPress={remove} />}
       </ScrollView>
+      </KeyboardAvoidingView>
       <ExercisePicker visible={picking} onClose={() => setPicking(false)} onPick={(ex) => setExercises((list) => [...list, ex])} />
     </View>
   );
@@ -211,6 +290,10 @@ const s = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderColor: colors.line, paddingTop: 12 },
   switchLabel: { fontFamily: fonts.semibold, fontSize: 15 },
   tempo: { height: 44 },
+  noteInput: {
+    backgroundColor: colors.raised, color: colors.text, borderRadius: radius.sm, height: 42, paddingHorizontal: 12,
+    fontFamily: fonts.body, fontSize: 14,
+  },
   opcoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   opcao: { height: 34, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.raised, justifyContent: 'center' },
   opcaoOn: { backgroundColor: colors.accent },

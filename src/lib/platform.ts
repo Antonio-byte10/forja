@@ -17,12 +17,17 @@ export const confirm = (title: string, message = '', ok = 'Confirmar') =>
         ),
       );
 
-/** Horário atual, atualizado a cada `ms`. */
-export const useNow = (ms = 1000) => {
+/** Horário atual, atualizado a cada `ms` enquanto `enabled` for verdadeiro. */
+export const useNow = (ms = 1000, enabled = true) => {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
+    if (!enabled) return;
+    const sync = setTimeout(() => setNow(Date.now()), 0);
     const id = setInterval(() => setNow(Date.now()), ms);
-    return () => clearInterval(id);
-  }, [ms]);
+    return () => {
+      clearTimeout(sync);
+      clearInterval(id);
+    };
+  }, [ms, enabled]);
   return now;
 };

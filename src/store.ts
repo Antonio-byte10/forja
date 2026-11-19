@@ -3,16 +3,20 @@ import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { defaultPlans, fichaCasa } from '@/data/defaults';
-import type { Backup, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
+import type { Ajustes, Backup, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
 import * as w from '@/lib/workout';
 
 const storage = createJSONStorage(() => AsyncStorage);
 
 type Store = Backup & {
+  ajustes: Ajustes;
+  setAjustes: (patch: Partial<Ajustes>) => void;
   savePlan: (plan: Plan) => void;
   deletePlan: (id: string) => void;
   addSession: (session: Session) => void;
   deleteSession: (id: string) => void;
+  /** Corrige um treino já salvo (carga digitada errado, série esquecida). */
+  updateSession: (session: Session) => void;
   restore: (data: Backup) => void;
 };
 
@@ -41,6 +45,8 @@ export const useStore = create<Store>()(
     (set) => ({
       plans: defaultPlans,
       history: [],
+      ajustes: { metaSemanal: 4 },
+      setAjustes: (patch) => set(({ ajustes }) => ({ ajustes: { ...ajustes, ...patch } })),
       savePlan: (plan) =>
         set(({ plans }) => ({
           plans: plans.some((p) => p.id === plan.id) ? plans.map((p) => (p.id === plan.id ? plan : p)) : [...plans, plan],
@@ -48,6 +54,8 @@ export const useStore = create<Store>()(
       deletePlan: (id) => set(({ plans }) => ({ plans: plans.filter((p) => p.id !== id) })),
       addSession: (session) => set(({ history }) => ({ history: w.insertSession(history, session) })),
       deleteSession: (id) => set(({ history }) => ({ history: history.filter((s) => s.id !== id) })),
+      updateSession: (session) =>
+        set(({ history }) => ({ history: w.insertSession(history.filter((s) => s.id !== session.id), w.limparNotas(session)) })),
       restore: ({ plans, history }) => {
         set({ plans, history });
         useActive.setState({ active: undefined });
@@ -58,7 +66,7 @@ export const useStore = create<Store>()(
       version: 2,
       storage,
       migrate,
-      partialize: ({ plans, history }) => ({ plans, history }),
+      partialize: ({ plans, history, ajustes }) => ({ plans, history, ajustes }),
     },
   ),
 );
@@ -68,10 +76,13 @@ type Active = {
   start: (planId: string) => void;
   startFree: () => void;
   updateSet: (ex: number, set: number, patch: Partial<SetLog>) => void;
+  updateNote: (ex: number, note: string) => void;
   addSet: (ex: number) => void;
   removeSet: (ex: number) => void;
   addExercise: (exercise: PlanExercise) => void;
   removeExercise: (ex: number) => void;
+  moveExercise: (from: number, to: number) => void;
+  replaceExercise: (ex: number, exercise: PlanExercise) => void;
   finish: () => void;
   discard: () => void;
 };
@@ -92,14 +103,26 @@ export const useActive = create<Active>()(
         },
         startFree: () => set({ active: w.startFree() }),
         updateSet: (ex, i, patch) => edit((s) => w.updateSet(s, ex, i, patch)),
+        updateNote: (ex, note) => edit((s) => w.updateNote(s, ex, note)),
         addSet: (ex) => edit((s) => w.addSet(s, ex)),
         removeSet: (ex) => edit((s) => w.removeSet(s, ex)),
         addExercise: (exercise) => edit((s) => w.addExercise(s, w.logFromPlan(exercise, useStore.getState().history))),
         removeExercise: (ex) => edit((s) => w.removeExercise(s, ex)),
+        moveExercise: (from, to) => edit((s) => w.moveExercise(s, from, to)),
+        replaceExercise: (ex, exercise) =>
+          edit((s) => w.replaceExercise(s, ex, w.logFromPlan(exercise, useStore.getState().history))),
         finish: () => {
           const { active } = get();
           if (!active) return;
-          useStore.getState().addSession({ ...active, finishedAt: Date.now() });
+          const data = useStore.getState();
+          const session = w.limparNotas({ ...active, finishedAt: Date.now() });
+          data.addSession(session);
+          // A anotação feita no treino vale para a ficha na próxima vez.
+          const plan = data.plans.find((p) => p.id === session.planId);
+          if (plan) {
+            const atualizada = w.notasParaFicha(plan, session);
+            if (atualizada !== plan) data.savePlan(atualizada);
+          }
           set({ active: undefined });
         },
         discard: () => set({ active: undefined }),

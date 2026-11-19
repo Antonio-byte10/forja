@@ -2,6 +2,9 @@
 
 _12/11/2026 — feito a partir do código atual (v1.0.0). Nada foi alterado no app._
 
+> **19/11/2026 (v1.2.0):** feitos 1.1–1.4, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.8, 2.9, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.4,
+> 5.1, 5.2 e 5.3. Ainda faltam: 1.5 (fotos em WebP), 2.7 (tipo de série), 2.10 (bi-set), 3.6 (peso corporal), 4.3 (exercício com foto) e 4.5 (deload).
+
 Esforço: **P** = algumas horas · **M** = um dia · **G** = mais de um dia.
 "Lib nova" = precisa adicionar uma biblioteca e gerar um APK novo (tudo continua local, sem nuvem).
 

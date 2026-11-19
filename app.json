@@ -3,13 +3,14 @@
     "name": "Treino",
     "slug": "treino",
     "scheme": "treino",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0A0B",
+    "primaryColor": "#FF5B1F",
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "package": "com.pessoal.treino",
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0B",
@@ -31,7 +32,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "./plugins/with-short-cmake-paths"
+      "./plugins/with-short-cmake-paths",
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#FF5B1F"
+        }
+      ]
     ]
   }
 }

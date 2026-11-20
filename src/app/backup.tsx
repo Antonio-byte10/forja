@@ -24,6 +24,7 @@ export default function Backup() {
   const plans = useStore((st) => st.plans);
   const history = useStore((st) => st.history);
   const pesos = useStore((st) => st.pesos);
+  const nutricao = useStore((st) => st.nutricao);
   const nFotos = useStore((st) => st.fotos.length);
   const restore = useStore((st) => st.restore);
   const ultimoBackup = useStore((st) => st.ajustes.ultimoBackup);
@@ -33,16 +34,16 @@ export default function Backup() {
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();
 
   const copy = async () => {
-    await Clipboard.setStringAsync(JSON.stringify({ plans, history, pesos }));
+    await Clipboard.setStringAsync(JSON.stringify({ plans, history, pesos, nutricao }));
     marcarBackup();
-    setMessage({ ok: true, text: 'Backup copiado. Cole numa conversa sua no WhatsApp, no e-mail ou num bloco de notas para guardar.' });
+    setMessage({ ok: true, text: 'Backup copiado. Guarde o conteúdo em um local de sua confiança.' });
   };
 
   const salvarArquivo = async () => {
     try {
-      await compartilharArquivo(`treino-backup-${hoje()}.json`, JSON.stringify({ plans, history, pesos }), 'application/json');
+      await compartilharArquivo(`treino-backup-${hoje()}.json`, JSON.stringify({ plans, history, pesos, nutricao }), 'application/json');
       marcarBackup();
-      setMessage({ ok: true, text: 'Arquivo de backup criado. Guarde no Drive, no WhatsApp ou no e-mail.' });
+      setMessage({ ok: true, text: 'Arquivo de backup criado. Guarde o arquivo em um local de sua confiança.' });
     } catch {
       setMessage({ ok: false, text: 'Não deu para criar o arquivo. Use "Copiar backup" como alternativa.' });
     }
@@ -92,7 +93,7 @@ export default function Backup() {
             <Icon name="database" size={22} color={colors.accent} />
           </View>
           <View style={{ flex: 1, gap: 4 }}>
-            <Txt v="h2">Tudo fica só neste celular</Txt>
+            <Txt v="h2">Dados salvos neste aparelho</Txt>
             <Txt v="sub">
               {plural(plans.length, 'ficha')} e {plural(history.length, 'treino')} salvos. Antes de trocar de celular ou
               desinstalar o app, salve o backup.
@@ -106,7 +107,7 @@ export default function Backup() {
         </View>
         <Txt v="sub" style={{ fontSize: 12 }}>
           {ultimoBackup ? `Último backup: ${new Date(ultimoBackup).toLocaleDateString('pt-BR')}.` : 'Nenhum backup feito ainda.'}
-          {' '}O backup leva fichas, treinos e peso corporal.{nFotos ? ` As ${nFotos} fotos não vão no backup: abra a foto e toque em compartilhar para guardar no Drive ou no Google Fotos.` : ''}
+          {' '}O backup inclui fichas, treinos, peso, medidas, plano alimentar e notas pessoais.{nFotos ? ` As ${nFotos} fotos não vão no backup: abra a foto e toque em compartilhar para guardar no Drive ou no Google Fotos.` : ''}
           {' '}A planilha abre no Excel ou no Planilhas Google (só para ver, não restaura).
         </Txt>
 

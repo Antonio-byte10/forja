@@ -1,3 +1,5 @@
+import type { Nutricao } from './nutricao';
+
 /**
  * Como o exercício é medido:
  * carga = kg × reps · reps = só repetições (peso do corpo) · tempo = segundos ·
@@ -71,7 +73,7 @@ export type Peso = { t: number; kg: number };
 /** Foto de progresso. O arquivo fica na pasta do app; `sessionId` liga a foto ao treino do dia. */
 export type Foto = { id: string; t: number; uri: string; sessionId?: string };
 
-export type Backup = { plans: Plan[]; history: Session[]; pesos?: Peso[] };
+export type Backup = { plans: Plan[]; history: Session[]; pesos?: Peso[]; nutricao?: Nutricao };
 
 /** Preferências que não fazem parte do backup. */
-export type Ajustes = { metaSemanal: number; ultimoBackup?: number; metaPassos: number; passos?: boolean };
+export type Ajustes = { metaSemanal: number; ultimoBackup?: number; metaPassos: number; passos?: boolean; conectarSono?: boolean };

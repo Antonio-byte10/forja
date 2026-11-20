@@ -64,7 +64,7 @@ export default function Historico() {
       ListEmptyComponent={
         <Card style={s.empty}>
           <Icon name="calendar" size={28} color={colors.faint} />
-          <Txt v="h2">Nada por aqui ainda</Txt>
+          <Txt v="h2">Nenhum treino registrado</Txt>
           <Txt v="sub" style={{ textAlign: 'center' }}>Treinos de ficha, treinos livres e atividades (corrida, futebol…) aparecem aqui, dia a dia.</Txt>
         </Card>
       }

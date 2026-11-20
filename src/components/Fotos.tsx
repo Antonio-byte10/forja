@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apagarArquivoFoto, compartilharFoto, escolherFoto, tirarFoto } from '@/lib/fotos';
+import { dataLocal, meioDia } from '@/lib/nutricao';
 import { confirm } from '@/lib/platform';
 import type { Foto } from '@/lib/types';
 import { uid } from '@/lib/workout';
@@ -14,14 +15,16 @@ export const dataCurta = (t: number) =>
   new Date(t).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/\./g, '');
 
 /** Botões de câmera e galeria. A foto fica com a data `t` e, se vier de um treino, ligada a ele. */
-export function AdicionarFoto({ t, sessionId, small }: { t?: number; sessionId?: string; small?: boolean }) {
+export function AdicionarFoto({ t, dia, sessionId, small }: { t?: number; dia?: string; sessionId?: string; small?: boolean }) {
   const [erro, setErro] = useState<string>();
   const add = async (fonte: 'camera' | 'galeria') => {
     setErro(undefined);
     const id = uid();
     try {
       const uri = fonte === 'camera' ? await tirarFoto(id) : await escolherFoto(id);
-      if (uri) useStore.getState().addFoto({ id, uri, t: t ?? Date.now(), ...(sessionId && { sessionId }) });
+      const agora = Date.now();
+      const data = dia && dia !== dataLocal(agora) ? meioDia(dia).getTime() : agora;
+      if (uri) useStore.getState().addFoto({ id, uri, t: t ?? data, ...(sessionId && { sessionId }) });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não deu para salvar a foto.');
     }

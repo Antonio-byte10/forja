@@ -1,3 +1,4 @@
+import { lerNutricao } from './nutricao';
 import type { Backup, ExerciseLog, Intensidade, Lugar, Medida, Peso, Plan, PlanExercise, Session, SetLog } from './types';
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -525,6 +526,7 @@ export const parseBackup = (input: string): Backup => {
   const data: unknown = JSON.parse(input);
   if (!isRaw(data) || !Array.isArray(data.plans) || !Array.isArray(data.history)) throw new Error('Backup inválido');
   return {
+    ...(data.nutricao !== undefined && { nutricao: lerNutricao(data.nutricao) }),
     ...(Array.isArray(data.pesos) && { pesos: cleanPesos(data.pesos) }),
     plans: rawList(data.plans).map(cleanPlan),
     // Mais novo primeiro, como o app espera.

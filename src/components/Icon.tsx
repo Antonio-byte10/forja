@@ -4,6 +4,7 @@ import { colors } from '@/theme';
 
 /** Ícones de traço no estilo Lucide (ISC), desenhados em 24×24. */
 const shapes = {
+  utensils: <Path d="M4 3v5a3 3 0 0 0 6 0V3M7 3v18M20 21V3c-4 2-6 7-5 11h5" />,
   home: (
     <>
       <Path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />

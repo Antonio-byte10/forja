@@ -4,11 +4,18 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { defaultPlans, fichaCasa } from '@/data/defaults';
 import type { Ajustes, Backup, Foto, Peso, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
+import { atualizarRegistro, dataLocal, meioDia, refeicoesEm, type Nutricao, type PlanoAlimentar, type Registro } from '@/lib/nutricao';
 import * as w from '@/lib/workout';
 
 const storage = createJSONStorage(() => AsyncStorage);
 
-type Store = Omit<Backup, 'pesos'> & {
+type Store = Omit<Backup, 'pesos' | 'nutricao'> & {
+  nutricao: Nutricao;
+  salvarPlanoAlimentar: (dia: string, plano: PlanoAlimentar) => void;
+  salvarDiario: (dia: string, registro: Omit<Registro, 'feitas'>, kg: number | undefined) => void;
+  marcarRefeicao: (dia: string, id: string) => void;
+  escolherAlternativa: (dia: string, id: string, valor: string) => void;
+  atualizarBemEstar: (dia: string, dados: Pick<Registro, 'sono' | 'disposicao'>) => void;
   pesos: Peso[];
   fotos: Foto[];
   addPeso: (peso: Peso) => void;
@@ -53,6 +60,44 @@ export const useStore = create<Store>()(
       history: [],
       pesos: [],
       fotos: [],
+      nutricao: { planos: {}, diario: {} },
+      salvarPlanoAlimentar: (dia, plano) => set(({ nutricao }) => {
+        const ativas = new Set(refeicoesEm(plano, dia).map((r) => r.id));
+        const feitas = nutricao.diario[dia]?.feitas?.filter((id) => ativas.has(id));
+        const escolhas = Object.fromEntries(Object.entries(nutricao.diario[dia]?.escolhas ?? {}).filter(([id]) => ativas.has(id)));
+        return { nutricao: {
+          planos: { ...nutricao.planos, [dia]: plano },
+          diario: atualizarRegistro(nutricao.diario, dia, { feitas, escolhas }),
+        } };
+      }),
+      salvarDiario: (dia, registro, kg) => set(({ nutricao, pesos }) => {
+        const anteriores = pesos.filter((p) => dataLocal(p.t) !== dia);
+        const existente = pesos.find((p) => dataLocal(p.t) === dia);
+        const t = existente?.t ?? (dataLocal(Date.now()) === dia ? Date.now() : meioDia(dia).getTime());
+        return {
+          nutricao: { ...nutricao, diario: atualizarRegistro(nutricao.diario, dia, registro) },
+          pesos: kg === undefined ? anteriores : [...anteriores, { kg, t }].sort((a, b) => a.t - b.t),
+        };
+      }),
+      marcarRefeicao: (dia, id) => set(({ nutricao }) => {
+        const feitas = nutricao.diario[dia]?.feitas ?? [];
+        const proxima = feitas.includes(id) ? feitas.filter((f) => f !== id) : [...feitas, id];
+        const escolhas = { ...nutricao.diario[dia]?.escolhas };
+        if (feitas.includes(id)) delete escolhas[id];
+        return { nutricao: { ...nutricao, diario: atualizarRegistro(nutricao.diario, dia, { feitas: proxima, escolhas }) } };
+      }),
+      escolherAlternativa: (dia, id, valor) => set(({ nutricao }) => {
+        const registro = nutricao.diario[dia];
+        const escolhas = { ...registro?.escolhas };
+        if (valor) escolhas[id] = valor;
+        else delete escolhas[id];
+        const feitas = new Set(registro?.feitas);
+        if (valor) feitas.add(id);
+        return { nutricao: { ...nutricao, diario: atualizarRegistro(nutricao.diario, dia, { escolhas, feitas: [...feitas] }) } };
+      }),
+      atualizarBemEstar: (dia, dados) => set(({ nutricao }) => ({
+        nutricao: { ...nutricao, diario: atualizarRegistro(nutricao.diario, dia, dados) },
+      })),
       // Um registro por dia: pesar de novo no mesmo dia substitui.
       addPeso: (peso) =>
         set(({ pesos }) => ({
@@ -72,8 +117,8 @@ export const useStore = create<Store>()(
       deleteSession: (id) => set(({ history }) => ({ history: history.filter((s) => s.id !== id) })),
       updateSession: (session) =>
         set(({ history }) => ({ history: w.insertSession(history.filter((s) => s.id !== session.id), w.limparNotas(session)) })),
-      restore: ({ plans, history, pesos }) => {
-        set({ plans, history, ...(pesos && { pesos }) });
+      restore: ({ plans, history, pesos, nutricao }) => {
+        set({ plans, history, ...(pesos && { pesos }), ...(nutricao && { nutricao }) });
         useActive.setState({ active: undefined });
       },
     }),
@@ -82,7 +127,7 @@ export const useStore = create<Store>()(
       version: 2,
       storage,
       migrate,
-      partialize: ({ plans, history, ajustes, pesos, fotos }) => ({ plans, history, ajustes, pesos, fotos }),
+      partialize: ({ plans, history, ajustes, pesos, fotos, nutricao }) => ({ plans, history, ajustes, pesos, fotos, nutricao }),
       // Dados salvos por versões antigas não têm os campos novos dos ajustes.
       merge: (salvo, atual) => {
         const s = (salvo ?? {}) as Partial<Store>;

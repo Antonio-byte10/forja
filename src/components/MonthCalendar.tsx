@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { Session } from '@/lib/types';
-import { dayKey } from '@/lib/workout';
+import { dataLocal } from '@/lib/nutricao';
+import { useStore } from '@/store';
 import { colors, fonts } from '@/theme';
 import { Card, IconButton, Txt } from './ui';
 
@@ -14,10 +16,18 @@ export function MonthCalendar({ history }: { history: Session[] }) {
   const first = new Date(today.getFullYear(), today.getMonth() + offset, 1);
   const year = first.getFullYear();
   const month = first.getMonth();
-  const trained = new Set(history.map((s) => dayKey(s.startedAt)));
+  const trained = useMemo(() => new Set(history.map((s) => dataLocal(s.startedAt))), [history]);
+  const pesos = useStore((st) => st.pesos);
+  const fotos = useStore((st) => st.fotos);
+  const nutricao = useStore((st) => st.nutricao);
+  const registros = useMemo(() => new Set([...Object.keys(nutricao.diario), ...Object.keys(nutricao.planos),
+    ...pesos.map((p) => dataLocal(p.t)), ...fotos.map((f) => dataLocal(f.t))]), [nutricao, pesos, fotos]);
   const blanks = first.getDay();
   const days = new Date(year, month + 1, 0).getDate();
-  const count = Array.from({ length: days }, (_, d) => trained.has(dayKey(new Date(year, month, d + 1)))).filter(Boolean).length;
+  const count = history.filter((sessao) => {
+    const data = new Date(sessao.startedAt);
+    return data.getFullYear() === year && data.getMonth() === month;
+  }).length;
   const title = first.toLocaleDateString('pt-BR', { month: 'long', ...(year !== today.getFullYear() && { year: 'numeric' }) });
 
   return (
@@ -39,19 +49,25 @@ export function MonthCalendar({ history }: { history: Session[] }) {
         {Array.from({ length: blanks }, (_, i) => <View key={`b${i}`} style={s.cell} />)}
         {Array.from({ length: days }, (_, i) => {
           const date = new Date(year, month, i + 1);
-          const done = trained.has(dayKey(date));
-          const isToday = dayKey(date) === dayKey(today);
+          const dia = dataLocal(date);
+          const done = trained.has(dia);
+          const isToday = dia === dataLocal(today);
+          const registrado = registros.has(dia);
           return (
-            <View key={i} style={s.cell}>
+            <Pressable key={i} style={s.cell} disabled={date > today} accessibilityRole="button"
+              accessibilityLabel={date.toLocaleDateString('pt-BR') + (done ? ', com treino' : '') + (registrado ? ', com registro' : '')}
+              onPress={() => router.push({ pathname: '/diario/[data]', params: { data: dia } })}>
               <View style={[s.day, done && s.done, isToday && !done && s.today]}>
                 <Txt style={[s.dayText, done && { color: colors.onAccent, fontFamily: fonts.bold }, date > today && { color: colors.faint }]}>
                   {i + 1}
                 </Txt>
+                {registrado && <View style={{ position: 'absolute', bottom: 2, width: 4, height: 4, borderRadius: 2, backgroundColor: done ? colors.onAccent : colors.accent }} />}
               </View>
-            </View>
+            </Pressable>
           );
         })}
       </View>
+      <Txt v="sub">Toque em um dia para abrir o diário. O ponto indica um registro de bem-estar.</Txt>
     </Card>
   );
 }

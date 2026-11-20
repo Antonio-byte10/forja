@@ -3,7 +3,7 @@ import type { Medida } from '@/lib/types';
 import type { AnimKey } from './animacoes';
 import { catalogExtra } from './catalogExtra';
 
-export const muscleGroups = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Glúteos', 'Panturrilha', 'Abdômen', 'Antebraço', 'Condicionamento', 'Cardio', 'Alongamento'] as const;
+export const muscleGroups = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Glúteos', 'Panturrilha', 'Abdômen', 'Antebraço', 'Condicionamento', 'Cardio', 'Alongamento', 'Lutas'] as const;
 export type MuscleGroup = (typeof muscleGroups)[number];
 
 export type CatalogItem = {
@@ -21,6 +21,11 @@ export type CatalogItem = {
 
 /** Fotos: free-exercise-db (domínio público). `unilateral`: a carga é por lado e o volume conta os dois. */
 const academia: Record<string, CatalogItem> = {
+  jiu_jitsu: { name: 'Jiu-jitsu', group: 'Lutas', unilateral: false, medida: 'tempo', image: require('../../assets/exercises/jiu_jitsu.jpg') },
+  boxe: { name: 'Boxe', group: 'Lutas', unilateral: false, medida: 'tempo', image: require('../../assets/exercises/boxe.jpg') },
+  muay_thai: { name: 'Muay Thai', group: 'Lutas', unilateral: false, medida: 'tempo', image: require('../../assets/exercises/muay_thai.jpg') },
+  judo: { name: 'Judô', group: 'Lutas', unilateral: false, medida: 'tempo', image: require('../../assets/exercises/judo.jpg') },
+  krav_maga: { name: 'Krav Magá', group: 'Lutas', unilateral: false, medida: 'tempo', image: require('../../assets/exercises/krav_maga.jpg') },
   // Peito
   supino_reto: { name: 'Supino reto', group: 'Peito', unilateral: false, image: require('../../assets/exercises/supino_reto.jpg') },
   supino_inclinado: { name: 'Supino inclinado', group: 'Peito', unilateral: false, image: require('../../assets/exercises/supino_inclinado.jpg') },
@@ -208,4 +213,5 @@ const pesoDoCorpo: Record<string, Pick<CatalogItem, 'medida' | 'anim'>> = {
 };
 
 export const catalog: Record<string, CatalogItem> = { ...academia, ...catalogExtra };
+export const modalidadesLuta = Object.entries(catalog).filter(([, item]) => item.group === 'Lutas');
 for (const [key, extra] of Object.entries(pesoDoCorpo)) catalog[key] = { ...catalog[key], ...extra };

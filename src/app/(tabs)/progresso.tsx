@@ -15,7 +15,7 @@ const DIA = 86_400_000;
 /** Faixa comum para ganhar massa: cerca de 10 a 20 séries por grupo muscular na semana. */
 const ALVO_MIN = 10;
 const ALVO_MAX = 20;
-const SEM_META = new Set(['Cardio', 'Alongamento', 'Condicionamento']);
+const SEM_META = new Set(['Cardio', 'Alongamento', 'Condicionamento', 'Lutas']);
 const PERIODOS = [
   [7, 'Últimos 7 dias'],
   [28, 'Média de 4 semanas'],

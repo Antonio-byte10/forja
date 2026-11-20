@@ -97,3 +97,6 @@ Próxima versão (treino em casa, peso do corpo, corrida, atividades): ver [prox
 | 6.7 | **Tema claro** | Treinar ao ar livre com sol forte. | M |
 | 6.8 | **Releases no GitHub com o APK** | Outras pessoas instalam sem compilar. | P |
 
+## 7. Nutrição e bem-estar na versão 1.3
+
+O Diário registra a alternativa consumida por refeição, horas de sono e disposição. No Android, a pessoa também pode autorizar a leitura de sono via Health Connect. O calendário permite escolher um período para gerar o resumo da consulta com notas e fotos opcionais. Durante a revisão de um plano importado, a refeição abre a página correspondente do PDF.

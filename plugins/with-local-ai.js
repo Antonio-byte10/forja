@@ -11,7 +11,7 @@ module.exports = (config) => withDangerousMod(config, ['android', async (mod) =>
   await mkdir(xml, { recursive: true });
   await writeFile(join(xml, 'forja_local_ai.xml'), `<network-security-config>
   <base-config cleartextTrafficPermitted="false" />
-  <domain-config cleartextTrafficPermitted="true"><domain>127.0.0.1</domain></domain-config>
+  <domain-config cleartextTrafficPermitted="true"><domain includeSubdomains="false">127.0.0.1</domain></domain-config>
 </network-security-config>
 `);
   const caminho = join(release, 'AndroidManifest.xml');

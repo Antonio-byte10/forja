@@ -91,6 +91,21 @@ describe('nextPlan', () => {
     expect(nextPlan(plans, [session('X')])?.id).toBe('A');
     expect(nextPlan([], [])).toBeUndefined();
   });
+
+  it('sugere D uma vez no fim de semana sem perder a posição de A/B/C', () => {
+    const d = { ...plan('D'), fimDeSemana: true };
+    const fichas = [...plans, d, { ...plan('F'), lugar: 'casa' as const }];
+    const dia = (n: number, hora = 12) => new Date(2026, 10, n, hora);
+    const historico = [session('B')];
+    expect(nextPlan(fichas, historico, dia(20))?.id).toBe('C'); // sexta
+    expect(nextPlan(fichas, historico, dia(21))?.id).toBe('D');
+    expect(nextPlan(fichas, historico, dia(22))?.id).toBe('D');
+    const sabado = { ...session('D'), startedAt: dia(21, 9).getTime() };
+    for (const n of [21, 22, 23]) expect(nextPlan(fichas, [sabado, ...historico], dia(n))?.id).toBe('C');
+    expect(nextPlan(fichas, [sabado, ...historico], dia(28))?.id).toBe('D');
+    expect(nextPlan([d], [], dia(20))).toBeUndefined();
+    expect(parseBackup(JSON.stringify({ plans: fichas, history: [] })).plans[3].fimDeSemana).toBe(true);
+  });
 });
 
 describe('utilitários', () => {

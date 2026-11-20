@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { defaultPlans, fichaCasa } from '@/data/defaults';
+import { migrarFichas } from '@/data/migrarFichas';
 import type { Ajustes, Backup, Foto, Peso, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
 import { atualizarRegistro, dataLocal, meioDia, refeicoesEm, type Nutricao, type PlanoAlimentar, type Registro } from '@/lib/nutricao';
 import * as w from '@/lib/workout';
@@ -38,10 +39,10 @@ let legado: Session | undefined;
 
 /** Dados antigos → formato atual. Versão 2: a ficha de casa entra uma vez só, sem mexer nas fichas do usuário. */
 export function migrate(state: unknown, version: number): Backup {
-  const old = (state ?? {}) as Partial<Backup> & { active?: Session };
+  const { active, ...old } = (state ?? {}) as Partial<Backup> & { active?: Session };
   let plans = old.plans ?? defaultPlans;
   if (version < 2) {
-    legado = old.active;
+    legado = active;
     if (!plans.some((p) => p.id === fichaCasa.id)) {
       const livre = plans.some((p) => p.name === fichaCasa.name)
         ? 'FGHIJKLMNOPQRSTUVWXYZ'.split('').find((l) => !plans.some((p) => p.name === l)) ?? '?'
@@ -49,7 +50,8 @@ export function migrate(state: unknown, version: number): Backup {
       plans = [...plans, { ...fichaCasa, name: livre }];
     }
   }
-  return { plans, history: old.history ?? [] };
+  if (version < 3) plans = migrarFichas(plans);
+  return { ...old, plans, history: old.history ?? [] };
 }
 
 /** Fichas e histórico. Só grava no aparelho quando um deles muda. */
@@ -124,7 +126,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'treino-v1',
-      version: 2,
+      version: 3,
       storage,
       migrate,
       partialize: ({ plans, history, ajustes, pesos, fotos, nutricao }) => ({ plans, history, ajustes, pesos, fotos, nutricao }),

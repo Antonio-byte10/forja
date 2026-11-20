@@ -51,7 +51,7 @@ function NextCard({ plan, onStart }: { plan: Plan; onStart: () => void }) {
   const more = plan.exercises.length - shown.length;
   return (
     <Card style={s.hero}>
-      <Txt v="label" style={{ color: colors.accent }}>Próximo treino</Txt>
+      <Txt v="label" style={{ color: colors.accent }}>{plan.fimDeSemana ? 'Treino de fim de semana' : 'Próximo treino'}</Txt>
       <View style={s.heroHead}>
         <Letter name={plan.name} />
         <View style={{ flex: 1 }}>
@@ -83,11 +83,11 @@ export default function Home() {
   const ultimoBackup = useStore((s) => s.ajustes.ultimoBackup);
   const { start, startFree } = useActive.getState();
   const { top } = useSafeAreaInsets();
-  const next = nextPlan(plans, history);
+  const now = new Date(useNow(60_000));
+  const next = nextPlan(plans, history, now);
   const last = history[0];
   const change = last ? volumeChange(history, last) : undefined;
-  const others = next && !active ? plans.filter((p) => p.id !== next.id) : [];
-  const now = new Date();
+  const others = !active ? plans.filter((p) => p.id !== next?.id) : [];
 
   const begin = (plan: Plan) => {
     start(plan.id);
@@ -119,19 +119,19 @@ export default function Home() {
         <ActiveCard session={active} />
       ) : next ? (
         <NextCard plan={next} onStart={() => begin(next)} />
-      ) : (
+      ) : !plans.length ? (
         <Card style={s.hero}>
           <Txt v="title">Monte sua primeira ficha</Txt>
           <Txt v="sub">Escolha os exercícios, as séries e as cargas. Depois é só começar.</Txt>
           <Button label="Criar ficha" icon="plus" onPress={() => router.push('/ficha/nova')} />
         </Card>
-      )}
+      ) : null}
 
       {!active && <PassosCard />}
 
       {others.length > 0 && (
         <View style={s.section}>
-          <Txt v="label">Ou fazer outra</Txt>
+          <Txt v="label">{next ? 'Ou fazer outra' : 'Escolha uma ficha'}</Txt>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.others}>
             {others.map((p) => (
               <Pressable

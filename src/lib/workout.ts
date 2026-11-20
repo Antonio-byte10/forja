@@ -278,14 +278,22 @@ export const removeExercise = (s: Session, index: number): Session => ({ ...s, e
 
 /**
  * Próxima ficha na sequência A → B → C → A, a partir do último treino de ficha da academia.
- * Fichas de casa, treinos livres e atividades não mexem na sequência.
+ * No sábado e domingo, prioriza a ficha de fim de semana até ela ser feita uma vez.
  */
-export const nextPlan = (plans: Plan[], history: Session[]): Plan | undefined => {
+export const nextPlan = (plans: Plan[], history: Session[], hoje = new Date()): Plan | undefined => {
   const gym = plans.filter((p) => p.lugar !== 'casa');
-  if (!gym.length) return undefined;
-  const last = history.find((s) => gym.some((p) => p.id === s.planId));
-  const i = gym.findIndex((p) => p.id === last?.planId);
-  return gym[(i + 1) % gym.length];
+  const dia = hoje.getDay();
+  if (dia === 6 || dia === 0) {
+    const sabado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - (dia === 0 ? 1 : 0)).getTime();
+    const pendente = gym.find((p) => p.fimDeSemana &&
+      !history.some((s) => s.planId === p.id && s.startedAt >= sabado && s.startedAt <= hoje.getTime()));
+    if (pendente) return pendente;
+  }
+  const regulares = gym.filter((p) => !p.fimDeSemana);
+  if (!regulares.length) return undefined;
+  const last = history.find((s) => regulares.some((p) => p.id === s.planId));
+  const i = regulares.findIndex((p) => p.id === last?.planId);
+  return regulares[(i + 1) % regulares.length];
 };
 
 /** 1RM estimado (fórmula de Epley). Com 1 repetição, é a própria carga. */
@@ -475,6 +483,7 @@ const cleanPlan = (p: Raw): Plan => ({
   name: str(p.name, '?'),
   title: str(p.title),
   ...lugarDoBackup(p.lugar),
+  ...(p.fimDeSemana === true && { fimDeSemana: true }),
   exercises: rawList(p.exercises).map((e) => ({
     id: str(e.id) || uid(),
     name: str(e.name, 'Exercício'),

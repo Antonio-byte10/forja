@@ -32,7 +32,7 @@ export type PlanExercise = {
   unilateral: boolean;
 };
 
-export type Plan = { id: string; name: string; title: string; lugar?: Lugar; exercises: PlanExercise[] };
+export type Plan = { id: string; name: string; title: string; lugar?: Lugar; fimDeSemana?: boolean; exercises: PlanExercise[] };
 
 export type SetLog = { weight: number; reps: number; done: boolean; seconds?: number; meters?: number };
 

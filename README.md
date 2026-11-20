@@ -18,7 +18,7 @@ O app é de código aberto, em português, e guarda os registros no próprio And
 ## O que ele faz
 
 **No treino**
-- Fichas A/B/C da academia e fichas de casa; a próxima ficha da sequência aparece pronta na tela inicial
+- Na academia, as fichas A (peito e tríceps), B (costas e bíceps) e C (pernas e ombros) se alternam. A D (corpo inteiro) aparece no sábado ou domingo, uma vez por fim de semana. A ficha de casa fica disponível à parte.
 - Cada série já vem com a carga e as repetições da última vez ("Última")
 - **Sugestão de carga** (progressão dupla): bateu o topo da faixa de reps em todas as séries? Vem +2,5 kg
 - Selo de **recorde**, **calculadora de anilhas** por lado e **anotação** por exercício (ex.: "banco 4")

@@ -31,14 +31,19 @@ describe('catálogo', () => {
     for (const a of usados) expect(Object.keys(animacoes), a).toContain(a);
   });
 
-  it('fichas padrão: 3 da academia, curtas, e a de casa, todas com exercícios do catálogo', () => {
+  it('fichas padrão da academia e de casa usam exercícios do catálogo', () => {
     const plans = read('defaults.ts').split("id: '").slice(1);
-    expect(plans).toHaveLength(4);
+    expect(plans).toHaveLength(5);
     const casa = plans.find((p) => p.includes("lugar: 'casa'"))!;
     for (const plan of plans) {
       const keys = [...plan.matchAll(/\['(\w+)', \d+/g)].map((m) => m[1]);
       for (const key of keys) expect(catalogKeys, key).toContain(key);
       if (plan === casa) continue;
+      if (plan.startsWith("D'")) {
+        expect(plan).toContain('fimDeSemana: true');
+        expect(keys.length).toBeGreaterThan(5);
+        continue;
+      }
       expect(keys.length).toBeGreaterThanOrEqual(4);
       expect(keys.length).toBeLessThanOrEqual(5);
     }

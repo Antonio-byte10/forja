@@ -1,4 +1,4 @@
-<p align="center"><img src="logo/forja-assinatura-escuro.svg" alt="Forja" width="60%"></p>
+<p align="center"><img src="../docs/telas/capa-forja.png" alt="Assinatura do Forja ao lado do cartão de supino" width="100%"></p>
 
 # Marca do Forja
 
@@ -19,6 +19,7 @@ Todos os arquivos estão em [`logo/`](logo/), em vetor (SVG).
 
 | Arquivo | Uso |
 |---|---|
+| [forja-assinatura-repositorio.svg](logo/forja-assinatura-repositorio.svg) | Assinatura da capa do README, com a ponta da bigorna alongada e três faíscas menores. Para uso sobre fundo carvão. |
 | `forja-assinatura-escuro.svg` | Assinatura completa (marca + nome) em fundo escuro |
 | `forja-assinatura-claro.svg` | Assinatura para fundo claro (nome em preto) |
 | `forja-assinatura-transparente-claro.svg` | Assinatura com nome claro e fundo transparente |

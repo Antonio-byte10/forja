@@ -1,10 +1,13 @@
-<p align="center"><img src="assets/banner.png" alt="Forja: treino de força no seu celular" width="100%"></p>
+<h1>
+  <picture>
+    <source media="(max-width: 600px)" srcset="docs/telas/capa-forja-mobile.png">
+    <img src="docs/telas/capa-forja.png" alt="Forja — cartão de supino reto com uma série de 55 kg e 10 repetições concluída" width="100%">
+  </picture>
+</h1>
 
-# Forja
+Criei o Forja para registrar meus treinos e, com o tempo, ampliei o app para acompanhar também minha alimentação, meu sono e meu progresso.
 
-App de treino de força e nutrição para Android, **open source**, em português e com armazenamento local.
-Feito em português, para quem treina na academia ou em casa e quer anotar séries, ver a carga subir e
-não depender de assinatura.
+O app é de código aberto, em português, e guarda os registros no próprio Android.
 
 <p align="center">
   <img src="docs/telas/inicio.jpg" alt="Tela inicial" width="30%">

@@ -23,13 +23,25 @@ const schema = {
  * Sem `token`: aceita só o loopback (`npm run ia` no computador).
  * Com `token` (Render ou outro servidor): aceita qualquer host, mas exige `Authorization: Bearer <token>`.
  */
-export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consultar = fetch, token } = {}) {
+export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consultar = fetch, token, registrar = console.warn } = {}) {
   let ocupado = false;
-  return createServer(async (req, res) => {
+  // Tentativas com código errado por IP: depois de 10 em 15 minutos, recusa sem nem comparar.
+  const erros = new Map();
+  const JANELA = 15 * 60_000;
+  const bloqueado = (ip) => { const e = erros.get(ip); return Boolean(e && Date.now() - e.inicio < JANELA && e.vezes >= 10); };
+  const falhou = (ip) => {
+    const e = erros.get(ip);
+    if (!e || Date.now() - e.inicio >= JANELA) erros.set(ip, { inicio: Date.now(), vezes: 1 });
+    else e.vezes++;
+    if (erros.size > 5000) erros.clear();
+  };
+  const servidor = createServer(async (req, res) => {
     const enviar = (status, dados) => {
-      res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
       res.end(JSON.stringify(dados));
     };
+    // No Render o IP real vem do proxy, no primeiro item de X-Forwarded-For.
+    const ip = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
     // Sem código de acesso, o serviço só atende o próprio computador.
     if (!token && !/^(127\.0\.0\.1|localhost):\d+$/.test(req.headers.host ?? '')) return enviar(403, {});
     // Navegadores só podem chamar a partir do app aberto em localhost; o app nativo não manda Origin.
@@ -41,11 +53,16 @@ export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consulta
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
       return enviar(204, {});
     }
-    const liberado = !token || autorizado(req.headers.authorization, token);
-    // Verificação de saúde do Render e botão "Testar conexão" do app. Não revela a chave.
-    if (req.url === '/saude' && req.method === 'GET') return enviar(200, { ok: true, autorizado: liberado, gemini: Boolean(chave) });
+    const saude = req.url === '/saude' && req.method === 'GET';
     const motivacao = req.url === '/motivacao';
-    if (!motivacao && req.url !== '/plano') return enviar(404, {});
+    if (!saude && !motivacao && req.url !== '/plano') return enviar(404, {});
+    if (token && bloqueado(ip)) return enviar(429, { erro: 'Muitas tentativas com código errado. Aguarde 15 minutos.' });
+    const enviado = req.headers.authorization;
+    const liberado = !token || autorizado(enviado, token);
+    // Só conta como tentativa quem mandou algum código; a verificação de saúde do Render não manda.
+    if (!liberado && enviado) falhou(ip);
+    // Verificação de saúde e botão "Testar conexão". Sem código válido, não diz nada além de "estou no ar".
+    if (saude) return enviar(200, liberado ? { ok: true, autorizado: true, gemini: Boolean(chave) } : { ok: true, autorizado: false });
     if (!liberado) return enviar(401, { erro: 'Código de acesso recusado. Confira em Servidor de IA.' });
     const tipo = motivacao ? 'application/json' : 'application/pdf';
     if (req.method !== 'POST' || req.headers['content-type'] !== tipo || req.headers['x-forja'] !== (motivacao ? 'motivacao' : 'pdf')) return enviar(415, {});
@@ -85,6 +102,9 @@ export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consulta
         }),
       });
       if (!resposta.ok) {
+        // Só o código e o tipo do erro do Google, nunca a chave nem o conteúdo enviado.
+        const detalhe = await resposta.json().catch(() => ({}));
+        registrar(`Gemini recusou: HTTP ${resposta.status} ${detalhe?.error?.status ?? ''}`.trim());
         const erro = resposta.status === 429 ? 'Limite do Gemini atingido. Tente mais tarde.' : 'O Gemini recusou a consulta. Confira a chave e o modelo no servidor.';
         return enviar(502, { erro });
       }
@@ -97,22 +117,31 @@ export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consulta
       }
       if (!saida?.refeicoes?.length) return enviar(422, { erro: 'Nenhuma refeição identificada no documento.' });
       enviar(200, { refeicoes: saida.refeicoes, orientacoes: saida.orientacoes });
-    } catch {
+    } catch (e) {
+      registrar('Falha ao consultar o Gemini: ' + (e instanceof Error ? e.name : 'erro'));
       enviar(502, { erro: motivacao ? 'Não foi possível gerar a mensagem.' : 'Não foi possível concluir a leitura. Tente novamente ou preencha manualmente.' });
     } finally {
       ocupado = false;
     }
   });
+  // Conexões lentas de propósito não prendem o servidor (o PDF leva até 85 s no Gemini).
+  servidor.headersTimeout = 15_000;
+  servidor.requestTimeout = 120_000;
+  return servidor;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { GEMINI_API_KEY, GEMINI_MODEL, FORJA_TOKEN, PORT } = process.env;
+  // Espaços e quebras de linha vêm junto quando se cola a chave no painel.
+  const [GEMINI_API_KEY, GEMINI_MODEL, FORJA_TOKEN] = ['GEMINI_API_KEY', 'GEMINI_MODEL', 'FORJA_TOKEN']
+    .map((nome) => process.env[nome]?.trim().replace(/^["']|["']$/g, ''));
+  const { PORT } = process.env;
   // O Render define PORT: aí o serviço fica público e só sobe com código de acesso.
   const publico = Boolean(PORT);
   if (publico && !FORJA_TOKEN) {
     console.error('Defina FORJA_TOKEN: sem ele qualquer pessoa usaria a sua chave do Gemini.');
     process.exit(1);
   }
+  if (FORJA_TOKEN && FORJA_TOKEN.length < 24) console.warn('FORJA_TOKEN curto: use 24 caracteres ou mais.');
   const porta = Number(PORT) || 8787;
   const host = publico ? '0.0.0.0' : '127.0.0.1';
   criarServico({ chave: GEMINI_API_KEY, modelo: GEMINI_MODEL || undefined, token: FORJA_TOKEN || undefined })

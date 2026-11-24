@@ -8,7 +8,7 @@ afterEach(async () => {
 
 async function abrir(chave, resposta, token) {
   const consultar = vi.fn().mockResolvedValue(resposta);
-  servidor = criarServico({ chave, consultar, token });
+  servidor = criarServico({ chave, consultar, token, registrar: () => {} });
   await new Promise((resolve) => servidor.listen(0, '127.0.0.1', resolve));
   const url = 'http://127.0.0.1:' + servidor.address().port + '/plano';
   const enviar = (headers = {}, body = '%PDF-1.7 fictício') => fetch(url, {
@@ -68,6 +68,18 @@ it('no servidor público exige o código de acesso antes de ler o pedido', async
 it('a verificação de saúde diz se o código vale sem expor a chave', async () => {
   await abrir('teste', undefined, 'codigo-secreto');
   const url = 'http://127.0.0.1:' + servidor.address().port + '/saude';
-  expect(await (await fetch(url)).json()).toEqual({ ok: true, autorizado: false, gemini: true });
+  expect(await (await fetch(url)).json()).toEqual({ ok: true, autorizado: false });
   expect(await (await fetch(url, { headers: { Authorization: 'Bearer codigo-secreto' } })).json()).toEqual({ ok: true, autorizado: true, gemini: true });
+});
+
+it('bloqueia quem erra o código muitas vezes, inclusive com o código certo depois', async () => {
+  const { enviar, consultar } = await abrir('teste', undefined, 'codigo-secreto');
+  for (let i = 0; i < 10; i++) expect((await enviar({ Authorization: 'Bearer chute' + i })).status).toBe(401);
+  expect((await enviar({ Authorization: 'Bearer codigo-secreto' })).status).toBe(429);
+  expect(consultar).not.toHaveBeenCalled();
+});
+it('a verificação de saúde sem código não conta como tentativa', async () => {
+  await abrir('teste', undefined, 'codigo-secreto');
+  const url = 'http://127.0.0.1:' + servidor.address().port + '/saude';
+  for (let i = 0; i < 12; i++) expect((await fetch(url)).status).toBe(200);
 });

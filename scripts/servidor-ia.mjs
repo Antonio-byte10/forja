@@ -92,7 +92,7 @@ export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consulta
         sistema = instrucao;
         formato = schema;
       }
-      const resposta = await consultar('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modelo) + ':generateContent', {
+      const pedir = () => consultar('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modelo) + ':generateContent', {
         method: 'POST', signal: AbortSignal.timeout(motivacao ? 20000 : 85000),
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
         body: JSON.stringify({
@@ -101,11 +101,20 @@ export function criarServico({ chave, modelo = 'gemini-3.5-flash-lite', consulta
           generationConfig: { responseMimeType: 'application/json', responseJsonSchema: formato },
         }),
       });
+      // Gemini sobrecarregado (500/503) costuma passar em segundos: tenta de novo antes de desistir.
+      // O PDF tenta só mais uma vez, para caber no tempo de espera do app.
+      let resposta = await pedir();
+      for (let extra = motivacao ? 3 : 1, espera = 2000; extra > 0 && (resposta.status === 503 || resposta.status === 500); extra--, espera *= 2) {
+        registrar(`Gemini ocupado (HTTP ${resposta.status}), tentando de novo`);
+        await new Promise((ok) => setTimeout(ok, espera));
+        resposta = await pedir();
+      }
       if (!resposta.ok) {
         // Só o código e o tipo do erro do Google, nunca a chave nem o conteúdo enviado.
         const detalhe = await resposta.json().catch(() => ({}));
         registrar(`Gemini recusou: HTTP ${resposta.status} ${detalhe?.error?.status ?? ''}`.trim());
-        const erro = resposta.status === 429 ? 'Limite do Gemini atingido. Tente mais tarde.' : 'O Gemini recusou a consulta. Confira a chave e o modelo no servidor.';
+        const erro = resposta.status === 429 ? 'Limite do Gemini atingido. Tente mais tarde.'
+          : resposta.status >= 500 ? 'O Gemini está sobrecarregado agora. Tente de novo em alguns minutos.' : 'O Gemini recusou a consulta. Confira a chave e o modelo no servidor.';
         return enviar(502, { erro });
       }
       const candidato = (await resposta.json()).candidates?.[0];

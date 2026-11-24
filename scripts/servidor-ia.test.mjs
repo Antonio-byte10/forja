@@ -83,3 +83,12 @@ it('a verificação de saúde sem código não conta como tentativa', async () =
   const url = 'http://127.0.0.1:' + servidor.address().port + '/saude';
   for (let i = 0; i < 12; i++) expect((await fetch(url)).status).toBe(200);
 });
+
+it('tenta de novo quando o Gemini está sobrecarregado', async () => {
+  const mensagem = 'Um passo de cada vez.';
+  const ok = Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ mensagem }) }] } }] });
+  const { motivar, consultar } = await abrir('teste', undefined);
+  consultar.mockReset().mockResolvedValueOnce(new Response('{}', { status: 503 })).mockResolvedValueOnce(ok);
+  expect(await (await motivar({ diasAtivos: 1 })).json()).toEqual({ mensagem });
+  expect(consultar).toHaveBeenCalledTimes(2);
+});

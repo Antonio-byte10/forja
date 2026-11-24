@@ -7,10 +7,11 @@ import { GaleriaFotos } from '@/components/GaleriaFotos';
 import { Icon } from '@/components/Icon';
 import { MonthCalendar } from '@/components/MonthCalendar';
 import { Button, Card, Txt } from '@/components/ui';
-import { dataLocal, planoEm } from '@/lib/nutricao';
+import { planoEm } from '@/lib/nutricao';
 import { useNow } from '@/lib/platform';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
+import { dataLocal } from '@/lib/datas';
 
 const secoes = [
   { nome: 'Diário', icone: 'pencil' },

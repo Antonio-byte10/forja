@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { dataLocal, planoEm, refeicoesEm, type Registro } from '@/lib/nutricao';
+import { planoEm, refeicoesEm, type Registro } from '@/lib/nutricao';
 import { useStore } from '@/store';
 import { colors } from '@/theme';
 import { Alternativa } from './Alternativa';
@@ -9,6 +9,7 @@ import { Campo } from './Campo';
 import { AdicionarFoto, Miniaturas } from './Fotos';
 import { Icon } from './Icon';
 import { Button, Card, Txt } from './ui';
+import { dataLocal } from '@/lib/datas';
 
 export function Diario({ dia, abrirPlano, ativo = true }: { dia: string; abrirPlano?: () => void; ativo?: boolean }) {
   const registro = useStore((st) => st.nutricao.diario[dia]);

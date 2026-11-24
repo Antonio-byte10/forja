@@ -6,7 +6,7 @@ import type { PlanExercise } from '@/lib/types';
 import { porTempo, uid } from '@/lib/workout';
 import { colors, fonts, radius } from '@/theme';
 import { Icon } from './Icon';
-import { ExerciseImage, IconButton, Txt } from './ui';
+import { Chip, ExerciseImage, IconButton, Txt } from './ui';
 
 const items = Object.entries(catalog).map(([key, item]) => ({ key, ...item }));
 const normalize = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -72,17 +72,7 @@ export function ExercisePicker({ visible, onClose, onPick, title, similarTo }: P
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsBar} contentContainerStyle={s.chips}>
           {[undefined, ...muscleGroups].map((g) => {
             const on = g === group;
-            return (
-              <Pressable
-                key={g ?? 'todos'}
-                onPress={() => setGroup(g)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={({ pressed }) => [s.chip, on && s.chipOn, pressed && s.pressed]}
-              >
-                <Txt style={[s.chipText, on && { color: colors.onAccent }]}>{g ?? 'Todos'}</Txt>
-              </Pressable>
-            );
+            return <Chip key={g ?? 'todos'} label={g ?? 'Todos'} selected={on} onPress={() => setGroup(g)} sobreFundo grande />;
           })}
         </ScrollView>
         <FlatList
@@ -142,9 +132,6 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, color: colors.text, fontFamily: fonts.medium, fontSize: 16, height: '100%' },
   chipsBar: { flexGrow: 0, flexShrink: 0, minHeight: 60 },
   chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center' },
-  chip: { height: 36, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.surface, justifyContent: 'center' },
-  chipOn: { backgroundColor: colors.accent },
-  chipText: { fontFamily: fonts.semibold, fontSize: 14 },
   list: { gap: 8, padding: 16, paddingTop: 4 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderRadius: radius.md, padding: 10, paddingRight: 14 },
   create: { borderWidth: 1, borderColor: colors.accent, borderStyle: 'dashed' },

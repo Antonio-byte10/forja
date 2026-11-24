@@ -3,6 +3,7 @@ import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { planoValido, type PlanoAlimentar } from './nutricao';
 import { confirm } from './platform';
+import { chamarServico, ROTAS } from './servicoIa';
 import { uid } from './workout';
 
 export async function importarPlano(signal: AbortSignal): Promise<{ plano: PlanoAlimentar; pdf: ArrayBuffer } | undefined> {
@@ -13,18 +14,9 @@ export async function importarPlano(signal: AbortSignal): Promise<{ plano: Plano
   try {
     if (signal.aborted) return;
     if (!arquivo || !arquivo.size || arquivo.size > 8 * 1024 * 1024) throw new Error('Escolha um PDF de até 8 MB.');
-    if (!await confirm('Enviar PDF ao Gemini?', pdf.name + ' será enviado à Google pelo serviço local para extrair as refeições. Você poderá revisar o resultado antes de aplicar.', 'Enviar PDF') || signal.aborted) return;
+    if (!await confirm('Enviar PDF ao Gemini?', pdf.name + ' será enviado à Google pelo servidor de IA para extrair as refeições. Você poderá revisar o resultado antes de aplicar.', 'Enviar PDF') || signal.aborted) return;
     const body = await arquivo.arrayBuffer();
-    let res: Response;
-    try {
-      res = await fetch('http://127.0.0.1:8787/plano', {
-        method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-Forja': 'pdf' }, body, signal,
-      });
-    } catch {
-      throw new Error('Serviço local indisponível. Inicie npm run ia no computador. No Android, conecte por USB e encaminhe a porta 8787 com adb reverse.');
-    }
-    const dados = await res.json();
-    if (!res.ok) throw new Error(typeof dados.erro === 'string' ? dados.erro : 'Não foi possível importar o PDF.');
+    const dados = await chamarServico(ROTAS.plano, body, signal);
     const plano = { orientacoes: dados.orientacoes, refeicoes: Array.isArray(dados.refeicoes)
       ? dados.refeicoes.map((r: object) => ({ ...r, id: uid() })) : [] };
     if (!planoValido(plano)) throw new Error('O PDF não retornou um plano completo. Confira o documento ou preencha manualmente.');

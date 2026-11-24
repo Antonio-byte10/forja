@@ -17,6 +17,12 @@ O app é de código aberto, em português, e guarda os registros no próprio And
 
 ## O que ele faz
 
+Em **Início → Planejar semana**, escolha uma ficha para o dia ou mova um treino para outra data livre. A ficha agendada para hoje ganha prioridade no Início. A agenda reconhece a conclusão pelo dia de início e pela ficha registrada no histórico.
+
+Em **Progresso → Minha semana**, o gráfico mostra minutos de treino nos últimos sete dias. Toque em um dia para abrir seu diário. O painel também apresenta refeições marcadas e a média de sono das noites com registro.
+
+O **Perfil energético** é opcional. A estimativa em kcal/dia usa peso, altura, idade, sexo e nível habitual de atividade do perfil salvo. Aplica as equações para adultos a partir de 19 anos, fora da gestação e da amamentação. O resultado já inclui atividade física e representa uma média populacional para aquele perfil. [Equações EER das DRI, Health Canada](https://www.canada.ca/en/health-canada/services/food-nutrition/healthy-eating/dietary-reference-intakes/tables/equations-estimate-energy-requirement.html)
+
 **No treino**
 - Na academia, as fichas A (peito e tríceps), B (costas e bíceps) e C (pernas e ombros) se alternam. A D (corpo inteiro) aparece no sábado ou domingo, uma vez por fim de semana. A ficha de casa fica disponível à parte.
 - Cada série já vem com a carga e as repetições da última vez ("Última")
@@ -70,10 +76,10 @@ No celular, abra o arquivo e permita "instalar apps de fontes desconhecidas" na 
 
 ## Rodar e testar no computador
 
-Precisa de [Node.js](https://nodejs.org) 20 ou mais novo.
+O ambiente testado usa [Node.js](https://nodejs.org) 24.19.0 e npm.
 
 ```bash
-npm install
+npm ci
 npm run web        # abre no navegador; use o modo celular do DevTools
 npm test           # testes da lógica (volume, progressão, recordes, backup…)
 npm run lint
@@ -82,15 +88,30 @@ npm run typecheck
 
 No navegador não há notificação, passos nem câmera; o resto funciona igual.
 
-## Importar um plano com Gemini
+## Usar o Gemini para planos e mensagens
 
-O preenchimento manual funciona offline. Para a leitura de PDF, use Node 22.18 ou posterior. Copie `.env.example` para `.env.local` e preencha `GEMINI_API_KEY`. O serviço usa `gemini-3.5-flash-lite` por padrão. Você pode escolher outro modelo compatível em `GEMINI_MODEL`. A chave pertence ao processo Node no computador. Os arquivos de ambiente locais são ignorados pelo Git.
+O preenchimento manual funciona offline. A importação de PDF e a mensagem motivacional passam por um servidor seu (`scripts/servidor-ia.mjs`), que guarda a chave do Gemini. O app nunca recebe a chave. O modelo padrão é `gemini-3.5-flash-lite`; troque em `GEMINI_MODEL` se quiser.
 
-1. Execute `npm run ia` no computador. Mantenha esse terminal aberto durante a importação.
-2. Na web, abra o Forja por `localhost` ou `127.0.0.1`. No Android, conecte o aparelho com depuração USB autorizada e execute `adb reverse tcp:8787 tcp:8787` (também funciona em emulador). O simulador iOS usa o loopback do Mac. A importação em um iPhone físico precisa de um encaminhamento de porta equivalente.
-3. Em **Nutrição → Plano**, toque em **Cadastrar plano** ou **Editar ou importar plano**, escolha **Importar PDF com Gemini** e confirme o envio. Confira as refeições e toque em **Aplicar plano a partir de hoje**.
+### Servidor de IA no Render (recomendado para o celular)
 
-O serviço escuta somente em `127.0.0.1:8787`. Ele recebe apenas o PDF selecionado, com limite de 8 MB. Se a chave estiver ausente, a cota acabar ou a leitura falhar, o plano salvo continua disponível. Para encerrar, pressione Ctrl+C no terminal.
+Assim o celular usa a IA pela internet, sem cabo nem computador ligado. Nenhum segredo vai para o GitHub.
+
+1. No Render, crie um **Blueprint** a partir do seu fork deste repositório. O `render.yaml` cria o serviço `forja-ia` no plano gratuito.
+2. Quando o Render pedir, cole a sua `GEMINI_API_KEY`. O `FORJA_TOKEN` é gerado pelo próprio Render.
+3. Depois do deploy, copie o endereço do serviço (`https://….onrender.com`) e o valor de `FORJA_TOKEN` (em **Environment**).
+4. No app, abra **Progresso → Configurar servidor de IA** (aparece depois de uma falha) ou **Nutrição → Plano → Configurar servidor de IA**. Preencha endereço e código, toque em **Testar conexão** e em **Salvar**.
+
+Quem gera o próprio APK pode deixar isso pronto: preencha `EXPO_PUBLIC_IA_URL` e `EXPO_PUBLIC_IA_TOKEN` no `.env.local` antes de `npm run build:apk`. Esses valores ficam dentro do APK; use só no seu aparelho.
+
+No plano gratuito o Render desliga o serviço depois de um tempo sem uso. O primeiro pedido depois disso leva até 1 minuto, e o app espera esse tempo. Sem `FORJA_TOKEN`, o servidor se recusa a subir em modo público.
+
+### Servidor no computador
+
+Use Node 22.18 ou posterior. Copie `.env.example` para `.env.local`, preencha `GEMINI_API_KEY` e execute `npm run ia`. O serviço escuta só em `127.0.0.1:8787` e é o endereço padrão do app quando nada foi configurado. Na web, abra o Forja por `localhost`. No Android, encaminhe a porta com `adb reverse tcp:8787 tcp:8787`.
+
+### O que é enviado
+
+Em **Nutrição → Plano**, **Importar PDF com Gemini** envia o PDF escolhido (até 8 MB) depois da sua confirmação. Você revisa as refeições antes de aplicar. Em **Progresso → Gerar mensagem com IA**, vai ao Gemini somente a contagem de dias com treino nos últimos sete dias. O painel mostra uma mensagem local quando o servidor está desligado. Endereço e código do servidor ficam só no aparelho e não entram no backup JSON.
 
 ## Gerar o APK (local, sem nuvem)
 

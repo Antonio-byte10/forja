@@ -25,6 +25,9 @@ export default function Backup() {
   const history = useStore((st) => st.history);
   const pesos = useStore((st) => st.pesos);
   const nutricao = useStore((st) => st.nutricao);
+  const agenda = useStore((st) => st.agenda);
+  const perfil = useStore((st) => st.perfil);
+  const gerarBackup = () => JSON.stringify({ plans, history, pesos, nutricao, agenda, perfil });
   const nFotos = useStore((st) => st.fotos.length);
   const restore = useStore((st) => st.restore);
   const ultimoBackup = useStore((st) => st.ajustes.ultimoBackup);
@@ -34,14 +37,14 @@ export default function Backup() {
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();
 
   const copy = async () => {
-    await Clipboard.setStringAsync(JSON.stringify({ plans, history, pesos, nutricao }));
+    await Clipboard.setStringAsync(gerarBackup());
     marcarBackup();
     setMessage({ ok: true, text: 'Backup copiado. Guarde o conteúdo em um local de sua confiança.' });
   };
 
   const salvarArquivo = async () => {
     try {
-      await compartilharArquivo(`treino-backup-${hoje()}.json`, JSON.stringify({ plans, history, pesos, nutricao }), 'application/json');
+      await compartilharArquivo(`treino-backup-${hoje()}.json`, gerarBackup(), 'application/json');
       marcarBackup();
       setMessage({ ok: true, text: 'Arquivo de backup criado. Guarde o arquivo em um local de sua confiança.' });
     } catch {
@@ -107,7 +110,7 @@ export default function Backup() {
         </View>
         <Txt v="sub" style={{ fontSize: 12 }}>
           {ultimoBackup ? `Último backup: ${new Date(ultimoBackup).toLocaleDateString('pt-BR')}.` : 'Nenhum backup feito ainda.'}
-          {' '}O backup inclui fichas, treinos, peso, medidas, plano alimentar e notas pessoais.{nFotos ? ` As ${nFotos} fotos não vão no backup: abra a foto e toque em compartilhar para guardar no Drive ou no Google Fotos.` : ''}
+          {' '}O backup inclui agenda, perfil energético, fichas, treinos, peso, medidas, plano alimentar e notas pessoais.{nFotos ? ` As ${nFotos} fotos não vão no backup: abra a foto e toque em compartilhar para guardar no Drive ou no Google Fotos.` : ''}
           {' '}A planilha abre no Excel ou no Planilhas Google (só para ver, não restaura).
         </Txt>
 

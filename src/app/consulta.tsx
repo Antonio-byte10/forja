@@ -5,9 +5,9 @@ import { Campo } from '@/components/Campo';
 import { Button, Card, ScreenHeader, Txt } from '@/components/ui';
 import { br, htmlConsulta, lerDataBR, resumoConsulta } from '@/lib/consulta';
 import { exportarConsulta, imagemParaRelatorio } from '@/lib/exportarConsulta';
-import { dataLocal, dataValida } from '@/lib/nutricao';
 import { useStore } from '@/store';
 import { colors } from '@/theme';
+import { dataLocal, dataValida } from '@/lib/datas';
 
 export default function Consulta() {
   const [hoje] = useState(() => new Date());

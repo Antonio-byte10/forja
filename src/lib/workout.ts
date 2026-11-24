@@ -1,4 +1,6 @@
+import { DIA_MS } from './datas';
 import { lerNutricao } from './nutricao';
+import { lerAgenda, perfilValido } from './semana';
 import type { Backup, ExerciseLog, Intensidade, Lugar, Medida, Peso, Plan, PlanExercise, Session, SetLog } from './types';
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -71,6 +73,9 @@ export const formatSet = (s: SetLog, medida: Medida = 'carga') =>
     : medida === 'reps' ? `${s.reps}`
       : medida === 'cardio' ? `${Math.round((s.seconds ?? 0) / 60)} min${s.meters ? ` · ${formatKm(s.meters)} km` : ''}`
         : formatSeconds(s.seconds ?? 0);
+
+/** Séries previstas na ficha. */
+export const seriesPlanejadas = (p: Plan) => p.exercises.reduce((n, e) => n + e.sets, 0);
 
 export const countSets = (s: Session) => {
   const sets = s.exercises.flatMap((e) => e.sets);
@@ -392,14 +397,9 @@ export const historicoCsv = (history: Session[]) => {
   return linhas.join('\n');
 };
 
-export const dayKey = (t: number | Date) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-};
-
 /** "hoje", "ontem" ou "há N dias", contando dias do calendário. */
 export const daysAgo = (t: number, now = Date.now()) => {
-  const days = Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86_400_000);
+  const days = Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / DIA_MS);
   return days <= 0 ? 'hoje' : days === 1 ? 'ontem' : `há ${days} dias`;
 };
 
@@ -534,7 +534,10 @@ const cleanPesos = (v: unknown): Peso[] =>
 export const parseBackup = (input: string): Backup => {
   const data: unknown = JSON.parse(input);
   if (!isRaw(data) || !Array.isArray(data.plans) || !Array.isArray(data.history)) throw new Error('Backup inválido');
+  if (data.perfil != null && !perfilValido(data.perfil)) throw new Error('Perfil inválido');
   return {
+    ...(data.agenda !== undefined && { agenda: lerAgenda(data.agenda) }),
+    ...(data.perfil !== undefined && { perfil: data.perfil }),
     ...(data.nutricao !== undefined && { nutricao: lerNutricao(data.nutricao) }),
     ...(Array.isArray(data.pesos) && { pesos: cleanPesos(data.pesos) }),
     plans: rawList(data.plans).map(cleanPlan),

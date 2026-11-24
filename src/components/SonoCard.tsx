@@ -1,13 +1,12 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
+import { formatarHoras } from '@/lib/datas';
 import { disposicoes, type Registro } from '@/lib/nutricao';
 import { lerSono } from '@/lib/sono';
 import { useStore } from '@/store';
 import { Button, Card, Txt } from './ui';
 import { Campo } from './Campo';
-
-export const duracaoSono = (min: number) => Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0');
 
 export function SonoCard({ dia, ativo }: { dia: string; ativo: boolean }) {
   const registro = useStore((s) => s.nutricao.diario[dia]);
@@ -44,7 +43,7 @@ export function SonoCard({ dia, ativo }: { dia: string; ativo: boolean }) {
   }, [ativo, consultar, dia]));
   return <Card style={{ gap: 10 }}>
     <Txt v="h2">Sono e disposição</Txt>
-    {!!registro?.sono && <Txt>{duracaoSono(registro.sono.minutos)} de sono · {registro.sono.fonte === 'manual' ? 'Registro manual' : 'Health Connect'}</Txt>}
+    {!!registro?.sono && <Txt>{formatarHoras(registro.sono.minutos)} de sono · {registro.sono.fonte === 'manual' ? 'Registro manual' : 'Health Connect'}</Txt>}
     {!!registro?.disposicao && <Txt v="sub">Disposição: {registro.disposicao}</Txt>}
     {editar ? <Editor dia={dia} registro={registro} fechar={() => setEditar(false)} /> :
       <Button small icon="pencil" variant="secondary" label={registro?.sono || registro?.disposicao ? 'Editar sono e disposição' : 'Anotar sono e disposição'} onPress={() => setEditar(true)} />}
@@ -61,7 +60,7 @@ export function SonoCard({ dia, ativo }: { dia: string; ativo: boolean }) {
 }
 
 function Editor({ dia, registro, fechar }: { dia: string; registro?: Registro; fechar: () => void }) {
-  const inicial = registro?.sono ? duracaoSono(registro.sono.minutos).replace('h', ':') : '';
+  const inicial = registro?.sono ? formatarHoras(registro.sono.minutos).replace('h', ':') : '';
   const [horas, setHoras] = useState(inicial);
   const [disposicao, setDisposicao] = useState(registro?.disposicao);
   const [erro, setErro] = useState('');

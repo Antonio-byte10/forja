@@ -5,12 +5,19 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { defaultPlans, fichaCasa } from '@/data/defaults';
 import { migrarFichas } from '@/data/migrarFichas';
 import type { Ajustes, Backup, Foto, Peso, Plan, PlanExercise, Session, SetLog } from '@/lib/types';
-import { atualizarRegistro, dataLocal, meioDia, refeicoesEm, type Nutricao, type PlanoAlimentar, type Registro } from '@/lib/nutricao';
+import { atualizarRegistro, refeicoesEm, type Nutricao, type PlanoAlimentar, type Registro } from '@/lib/nutricao';
 import * as w from '@/lib/workout';
+import type { Agenda, Perfil } from '@/lib/semana';
+import { dataLocal, meioDia } from '@/lib/datas';
 
 const storage = createJSONStorage(() => AsyncStorage);
 
 type Store = Omit<Backup, 'pesos' | 'nutricao'> & {
+  agenda: Agenda;
+  perfil: Perfil | null;
+  agendar: (dia: string, ficha?: string) => void;
+  remarcar: (origem: string, destino: string) => void;
+  salvarPerfil: (perfil: Perfil | null) => void;
   nutricao: Nutricao;
   salvarPlanoAlimentar: (dia: string, plano: PlanoAlimentar) => void;
   salvarDiario: (dia: string, registro: Omit<Registro, 'feitas'>, kg: number | undefined) => void;
@@ -60,6 +67,21 @@ export const useStore = create<Store>()(
     (set) => ({
       plans: defaultPlans,
       history: [],
+      agenda: {},
+      perfil: null,
+      salvarPerfil: (perfil) => set({ perfil }),
+      agendar: (dia, ficha) => set((state) => {
+        const agenda = { ...state.agenda };
+        if (ficha) agenda[dia] = ficha;
+        else delete agenda[dia];
+        return { agenda };
+      }),
+      remarcar: (origem, destino) => set((state) => {
+        if (!state.agenda[origem] || state.agenda[destino]) return state;
+        const agenda = { ...state.agenda, [destino]: state.agenda[origem] };
+        delete agenda[origem];
+        return { agenda };
+      }),
       pesos: [],
       fotos: [],
       nutricao: { planos: {}, diario: {} },
@@ -103,7 +125,7 @@ export const useStore = create<Store>()(
       // Um registro por dia: pesar de novo no mesmo dia substitui.
       addPeso: (peso) =>
         set(({ pesos }) => ({
-          pesos: [...pesos.filter((p) => w.dayKey(p.t) !== w.dayKey(peso.t)), peso].sort((a, b) => a.t - b.t),
+          pesos: [...pesos.filter((p) => dataLocal(p.t) !== dataLocal(peso.t)), peso].sort((a, b) => a.t - b.t),
         })),
       deletePeso: (t) => set(({ pesos }) => ({ pesos: pesos.filter((p) => p.t !== t) })),
       addFoto: (foto) => set(({ fotos }) => ({ fotos: [...fotos, foto].sort((a, b) => b.t - a.t) })),
@@ -114,13 +136,16 @@ export const useStore = create<Store>()(
         set(({ plans }) => ({
           plans: plans.some((p) => p.id === plan.id) ? plans.map((p) => (p.id === plan.id ? plan : p)) : [...plans, plan],
         })),
-      deletePlan: (id) => set(({ plans }) => ({ plans: plans.filter((p) => p.id !== id) })),
+      deletePlan: (id) => set(({ plans, agenda }) => ({
+        plans: plans.filter((p) => p.id !== id),
+        agenda: Object.fromEntries(Object.entries(agenda).filter(([dia, ficha]) => ficha !== id || dia < dataLocal(Date.now()))),
+      })),
       addSession: (session) => set(({ history }) => ({ history: w.insertSession(history, session) })),
       deleteSession: (id) => set(({ history }) => ({ history: history.filter((s) => s.id !== id) })),
       updateSession: (session) =>
         set(({ history }) => ({ history: w.insertSession(history.filter((s) => s.id !== session.id), w.limparNotas(session)) })),
-      restore: ({ plans, history, pesos, nutricao }) => {
-        set({ plans, history, ...(pesos && { pesos }), ...(nutricao && { nutricao }) });
+      restore: ({ plans, history, pesos, nutricao, agenda = {}, perfil = null }) => {
+        set({ plans, history, agenda, perfil, ...(pesos && { pesos }), ...(nutricao && { nutricao }) });
         useActive.setState({ active: undefined });
       },
     }),
@@ -129,7 +154,7 @@ export const useStore = create<Store>()(
       version: 3,
       storage,
       migrate,
-      partialize: ({ plans, history, ajustes, pesos, fotos, nutricao }) => ({ plans, history, ajustes, pesos, fotos, nutricao }),
+      partialize: ({ plans, history, ajustes, pesos, fotos, nutricao, agenda, perfil }) => ({ plans, history, ajustes, pesos, fotos, nutricao, agenda, perfil }),
       // Dados salvos por versões antigas não têm os campos novos dos ajustes.
       merge: (salvo, atual) => {
         const s = (salvo ?? {}) as Partial<Store>;

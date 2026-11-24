@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { Session } from '@/lib/types';
-import { dayKey, semanasSeguidas, totals } from '@/lib/workout';
+import { semanasSeguidas, totals } from '@/lib/workout';
 import { colors, fonts } from '@/theme';
 import { Icon } from './Icon';
+import { dataLocal } from '@/lib/datas';
 import { useStore } from '@/store';
 import { Card, IconButton, ProgressBar, Txt } from './ui';
 
@@ -12,7 +13,7 @@ const LETTERS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 /** Domingo a sábado da semana atual, com os dias treinados marcados. */
 export function WeekStrip({ history }: { history: Session[] }) {
   const today = new Date();
-  const trained = new Set(history.map((s) => dayKey(s.startedAt)));
+  const trained = new Set(history.map((s) => dataLocal(s.startedAt)));
   const days = Array.from({ length: 7 }, (_, i) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + i));
   // Conta treinos (dois no mesmo dia valem dois) e o tempo somado da semana.
   const { sessions: count, minutes } = totals(history, days[0].getTime(), days[6].getTime() + 86_400_000);
@@ -46,8 +47,8 @@ export function WeekStrip({ history }: { history: Session[] }) {
       )}
       <View style={s.row}>
         {days.map((d, i) => {
-          const done = trained.has(dayKey(d));
-          const isToday = dayKey(d) === dayKey(today);
+          const done = trained.has(dataLocal(d));
+          const isToday = dataLocal(d) === dataLocal(today);
           const future = d > today && !isToday;
           return (
             <View key={i} style={s.day} accessibilityLabel={`${d.toLocaleDateString('pt-BR', { weekday: 'long' })}${done ? ', treinou' : ''}`}>

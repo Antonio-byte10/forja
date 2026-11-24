@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   Image, Pressable, StyleSheet, Text, TextInput, View,
@@ -6,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalog } from '@/data/catalog';
+import { voltar } from '@/lib/navegacao';
 import { parseNumber } from '@/lib/workout';
 import { colors, fonts, radius } from '@/theme';
 import { Boneco } from './Boneco';
@@ -32,18 +32,20 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   icon?: IconName;
   small?: boolean;
+  selected?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export function Button({ label, onPress, variant = 'primary', icon, small, disabled, style }: ButtonProps) {
+export function Button({ label, onPress, variant = 'primary', icon, small, disabled, selected, style }: ButtonProps) {
   const tint = variant === 'primary' ? colors.onAccent : variant === 'danger' ? colors.danger : variant === 'ghost' ? colors.accent : colors.text;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      aria-selected={selected}
+      accessibilityState={{ disabled, selected }}
       style={({ pressed }) => [s.btn, s[variant], small && s.small, disabled && s.disabled, pressed && s.pressed, style]}
     >
       {icon && <Icon name={icon} size={small ? 16 : 20} color={tint} stroke={2.5} />}
@@ -83,6 +85,54 @@ export function IconButton({ icon, label, onPress, color = colors.text, filled, 
 
 export const Card = ({ style, ...props }: ViewProps) => <View style={[s.card, style]} {...props} />;
 
+/** Pílula selecionável. `sobreFundo`: fora de um Card, usa a cor de superfície para destacar do fundo. */
+export function Chip({ label, selected, onPress, sobreFundo, grande }: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  sobreFundo?: boolean;
+  grande?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      aria-selected={selected}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [s.chip, grande && s.chipGrande, sobreFundo && s.chipFundo, selected && s.chipOn, pressed && { opacity: 0.7 }]}
+    >
+      <Txt style={[s.chipText, grande && { fontSize: 14 }, selected && { color: colors.onAccent }]}>{label}</Txt>
+    </Pressable>
+  );
+}
+
+/** Grupo de chips de escolha única: `[valor, rótulo]`. */
+export function Opcoes<T extends string | number>({ options, value, onChange, label, sobreFundo, grande }: {
+  options: readonly (readonly [T, string])[];
+  value: T | undefined;
+  onChange: (v: T) => void;
+  label: string;
+  sobreFundo?: boolean;
+  grande?: boolean;
+}) {
+  return (
+    <View style={s.chips} accessibilityLabel={label}>
+      {options.map(([v, texto]) => (
+        <Chip key={String(v)} label={texto} selected={v === value} onPress={() => onChange(v)} sobreFundo={sobreFundo} grande={grande} />
+      ))}
+    </View>
+  );
+}
+
+/** Quadrado com a letra da ficha. `suave`: fundo translúcido em vez do laranja cheio. */
+export function LetraFicha({ letra, size = 64, suave }: { letra: string; size?: number; suave?: boolean }) {
+  return (
+    <View style={[s.letra, suave && s.letraSuave, { width: size, height: size, borderRadius: size / 4 }]}>
+      <Text style={[s.letraTexto, suave && { color: colors.accent }, { fontSize: size * 0.62, lineHeight: size * 0.75 }]}>{letra}</Text>
+    </View>
+  );
+}
+
 export function ProgressBar({ value, style }: { value: number; style?: StyleProp<ViewStyle> }) {
   return (
     <View style={[s.track, style]}>
@@ -96,7 +146,7 @@ export function ScreenHeader({ title, kicker, right, onBack }: { title: string; 
   const { top } = useSafeAreaInsets();
   return (
     <View style={[s.header, { paddingTop: top + 8 }]}>
-      <IconButton icon="chevronLeft" label="Voltar" onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')))} filled />
+      <IconButton icon="chevronLeft" label="Voltar" onPress={onBack ?? (() => voltar())} filled />
       <View style={s.headerTitle}>
         {kicker && <Txt v="label">{kicker}</Txt>}
         <Txt v="h2" numberOfLines={1}>{title}</Txt>
@@ -203,6 +253,15 @@ const s = StyleSheet.create({
   btnLabelSmall: { fontSize: 15 },
   iconBtn: { alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { minHeight: 34, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.raised, justifyContent: 'center' },
+  chipGrande: { minHeight: 40, paddingHorizontal: 14 },
+  chipFundo: { backgroundColor: colors.surface },
+  chipOn: { backgroundColor: colors.accent },
+  chipText: { fontFamily: fonts.semibold, fontSize: 13 },
+  letra: { backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  letraSuave: { backgroundColor: colors.accentSoft },
+  letraTexto: { fontFamily: fonts.displayHeavy, color: colors.onAccent },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.raised, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 3, backgroundColor: colors.accent },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: colors.bg },

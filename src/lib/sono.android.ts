@@ -1,5 +1,5 @@
 import { aggregateRecord, getGrantedPermissions, getSdkStatus, initialize, requestPermission, SdkAvailabilityStatus } from 'react-native-health-connect';
-import { meioDia } from './nutricao';
+import { meioDia } from './datas';
 
 /** Noite atribuída ao dia em que termina, do meio-dia anterior até o meio-dia local. */
 export async function lerSono(dia: string, pedir: boolean): Promise<number | undefined> {

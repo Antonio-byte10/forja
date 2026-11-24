@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apagarArquivoFoto, compartilharFoto, escolherFoto, tirarFoto } from '@/lib/fotos';
-import { dataLocal, meioDia } from '@/lib/nutricao';
 import { confirm } from '@/lib/platform';
 import type { Foto } from '@/lib/types';
 import { uid } from '@/lib/workout';
@@ -10,9 +9,10 @@ import { useStore } from '@/store';
 import { colors, radius } from '@/theme';
 import { Icon } from './Icon';
 import { Button, IconButton, Txt } from './ui';
+import { dataLocal, formatarData, meioDia } from '@/lib/datas';
 
 export const dataCurta = (t: number) =>
-  new Date(t).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/\./g, '');
+  formatarData(t, { day: 'numeric', month: 'short', year: '2-digit' });
 
 /** Botões de câmera e galeria. A foto fica com a data `t` e, se vier de um treino, ligada a ele. */
 export function AdicionarFoto({ t, dia, sessionId, small }: { t?: number; dia?: string; sessionId?: string; small?: boolean }) {

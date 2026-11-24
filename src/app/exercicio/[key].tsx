@@ -1,10 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from '@/components/LineChart';
-import { Card, ExerciseImage, ScreenHeader, Txt } from '@/components/ui';
+import { Card, ExerciseImage, Opcoes, ScreenHeader, Txt } from '@/components/ui';
 import { catalog } from '@/data/catalog';
+import { formatarData } from '@/lib/datas';
 import { evolucao, exerciseKey, formatKg, formatSet, medidaDe } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
@@ -47,19 +48,7 @@ export default function Exercicio() {
 
         {pontos.length > 0 ? (
           <Card style={{ gap: 12 }}>
-            <View style={s.chips}>
-              {METRICAS.map(([m, rotulo]) => (
-                <Pressable
-                  key={m}
-                  onPress={() => setMetrica(m)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: m === metrica }}
-                  style={[s.chip, m === metrica && s.chipOn]}
-                >
-                  <Txt style={[s.chipText, m === metrica && { color: colors.onAccent }]}>{rotulo}</Txt>
-                </Pressable>
-              ))}
-            </View>
+            <Opcoes label="Métrica do gráfico" options={METRICAS} value={metrica} onChange={setMetrica} />
             <LineChart values={pontos.map((p) => p[metrica])} label={`Gráfico de ${nome}`} />
             <Txt v="sub" style={{ fontSize: 12 }}>
               {pontos.length === 1 ? 'Faça mais treinos para ver a linha.' : `De ${new Date(pontos[0].t).toLocaleDateString('pt-BR')} até hoje, em kg.`}
@@ -75,7 +64,7 @@ export default function Exercicio() {
         {vezes.map(({ s: sessao, e }, i) => (
           <View key={`${sessao.id}-${i}`} style={s.item}>
             <Txt v="label" style={{ color: colors.text }}>
-              {new Date(sessao.startedAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}
+              {formatarData(sessao.startedAt, { weekday: 'short', day: 'numeric', month: 'short' })}
             </Txt>
             <Txt v="sub">{e.sets.filter((x) => x.done).map((x) => formatSet(x, medidaDe(e))).join(' · ')}</Txt>
             {e.note ? <Txt v="sub" style={{ fontStyle: 'italic', color: colors.faint }}>{e.note}</Txt> : null}
@@ -91,9 +80,5 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: 16, gap: 12 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   strong: { fontFamily: fonts.display, fontSize: 20, color: colors.accent },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.raised, justifyContent: 'center' },
-  chipOn: { backgroundColor: colors.accent },
-  chipText: { fontFamily: fonts.semibold, fontSize: 13 },
   item: { backgroundColor: colors.surface, borderRadius: radius.md, padding: 12, gap: 2 },
 });

@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Miniaturas } from '@/components/Fotos';
 import { Icon } from '@/components/Icon';
 import { PesoCard } from '@/components/PesoCard';
-import { Button, Card, ExerciseImage, Txt } from '@/components/ui';
+import { PainelSemanal } from '@/components/PainelSemanal';
+import { Button, Card, ExerciseImage, Opcoes, Txt } from '@/components/ui';
 import { catalog } from '@/data/catalog';
 import { daysAgo, exerciciosFeitos, formatKg, seriesPorGrupo } from '@/lib/workout';
 import { useStore } from '@/store';
@@ -40,6 +41,7 @@ export default function Progresso() {
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: top + 16 }]}>
       <Txt v="hero">Progresso</Txt>
+      <PainelSemanal />
 
       <PesoCard />
 
@@ -62,19 +64,7 @@ export default function Progresso() {
           <Txt v="h2" style={{ flex: 1 }}>Séries por grupo</Txt>
           <Txt v="label">por semana</Txt>
         </View>
-        <View style={s.chips}>
-          {PERIODOS.map(([d, rotulo]) => (
-            <Pressable
-              key={d}
-              onPress={() => setDias(d)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: d === dias }}
-              style={[s.chip, d === dias && s.chipOn]}
-            >
-              <Txt style={[s.chipText, d === dias && { color: colors.onAccent }]}>{rotulo}</Txt>
-            </Pressable>
-          ))}
-        </View>
+        <Opcoes label="Período" options={PERIODOS} value={dias} onChange={setDias} />
         {grupos.length === 0 ? (
           <Txt v="sub">Nenhuma série feita nesse período.</Txt>
         ) : (
@@ -145,10 +135,6 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: 16, paddingBottom: 32, gap: 12 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.raised, justifyContent: 'center' },
-  chipOn: { backgroundColor: colors.accent },
-  chipText: { fontFamily: fonts.semibold, fontSize: 13 },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.raised, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 4 },
   mark: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: colors.text, opacity: 0.5 },

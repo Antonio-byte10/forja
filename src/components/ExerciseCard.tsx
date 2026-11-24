@@ -168,6 +168,7 @@ export const ExerciseCard = memo(function ExerciseCard({
                   onPress={() => (contar ? onTimer(index, i) : onToggle(index, i, !set.done))}
                   onLongPress={() => onToggle(index, i, !set.done)}
                   accessibilityRole={contar ? 'button' : 'checkbox'}
+                  aria-checked={contar ? undefined : set.done}
                   accessibilityState={contar ? undefined : { checked: set.done }}
                   accessibilityLabel={contar ? `${name}: começar a contagem da série ${i + 1}` : `${name}: série ${i + 1} feita`}
                   style={({ pressed }) => [s.colCheck, s.check, set.done && s.checkOn, pressed && s.pressed]}

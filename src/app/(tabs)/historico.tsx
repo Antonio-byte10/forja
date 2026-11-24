@@ -9,8 +9,9 @@ import { Button, Card, Txt } from '@/components/ui';
 import { confirm } from '@/lib/platform';
 import type { Session } from '@/lib/types';
 import {
-  countSets, dayKey, exerciseKey, exerciseVolume, formatKg, formatKm, medidaDe, pace, resumo, sessionMeters, sessionMinutes, summarizeSets, volumeChanges,
+  countSets, exerciseKey, exerciseVolume, formatKg, formatKm, medidaDe, pace, resumo, sessionMeters, sessionMinutes, summarizeSets, volumeChanges,
 } from '@/lib/workout';
+import { dataLocal, formatarData } from '@/lib/datas';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
 
@@ -43,8 +44,8 @@ export default function Historico() {
   const dias = useMemo(() => {
     const m = new Map<string, { n: number; min: number }>();
     for (const s of history) {
-      const d = m.get(dayKey(s.startedAt)) ?? { n: 0, min: 0 };
-      m.set(dayKey(s.startedAt), { n: d.n + 1, min: d.min + sessionMinutes(s) });
+      const d = m.get(dataLocal(s.startedAt)) ?? { n: 0, min: 0 };
+      m.set(dataLocal(s.startedAt), { n: d.n + 1, min: d.min + sessionMinutes(s) });
     }
     return m;
   }, [history]);
@@ -73,8 +74,8 @@ export default function Historico() {
         const date = new Date(item.startedAt);
         const isOpen = open === item.id;
         const { valor, unidade } = resumo(item);
-        const primeiroDoDia = index === 0 || dayKey(history[index - 1].startedAt) !== dayKey(item.startedAt);
-        const dia = dias.get(dayKey(item.startedAt));
+        const primeiroDoDia = index === 0 || dataLocal(history[index - 1].startedAt) !== dataLocal(item.startedAt);
+        const dia = dias.get(dataLocal(item.startedAt));
         const remove = async () => {
           if (await confirm('Apagar este registro?', 'Não dá para desfazer.', 'Apagar')) deleteSession(item.id);
         };
@@ -83,7 +84,7 @@ export default function Historico() {
             {primeiroDoDia && (
               <View style={s.dayHead}>
                 <Txt v="label" style={{ color: colors.text }}>
-                  {date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}
+                  {formatarData(date, { weekday: 'short', day: 'numeric', month: 'short' })}
                 </Txt>
                 {dia && dia.n > 1 && <Txt v="label">{dia.n} treinos · {dia.min} min</Txt>}
               </View>

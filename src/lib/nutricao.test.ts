@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { atualizarRegistro, dataLocal, dataValida, meioDia, planoEm, refeicoesEm, type PlanoAlimentar } from './nutricao';
+import { atualizarRegistro, planoEm, refeicoesEm, type PlanoAlimentar } from './nutricao';
 import { parseBackup } from './workout';
+import { dataLocal, dataValida, meioDia } from './datas';
 
 const plano: PlanoAlimentar = { orientacoes: 'Conferir alternativas', refeicoes: [
   { id: 'a', nome: 'Almoço', horario: '', alimentos: 'Porção conforme plano', dias: [] },

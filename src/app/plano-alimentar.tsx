@@ -6,11 +6,13 @@ import { Campo } from '@/components/Campo';
 import { Button, Card, IconButton, ScreenHeader, Txt } from '@/components/ui';
 import { abrirPagina } from '@/lib/abrirPagina';
 import { importarPlano } from '@/lib/importarPlano';
-import { dataLocal, planoEm, planoValido, type PlanoAlimentar, type Refeicao } from '@/lib/nutricao';
+import { planoEm, planoValido, type PlanoAlimentar, type Refeicao } from '@/lib/nutricao';
 import { useNow } from '@/lib/platform';
+import { voltar } from '@/lib/navegacao';
 import { uid } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, radius } from '@/theme';
+import { dataLocal } from '@/lib/datas';
 
 const nova = (): Refeicao => ({ id: uid(), nome: '', horario: '', alimentos: '', dias: [] });
 const semana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -57,8 +59,7 @@ export default function EditorPlano() {
       return;
     }
     useStore.getState().salvarPlanoAlimentar(hoje, plano);
-    if (router.canGoBack()) router.back();
-    else router.replace('/nutricao');
+    voltar('/nutricao');
   };
   return <View style={{ flex: 1, backgroundColor: colors.bg }}>
     <ScreenHeader kicker="Nutrição" title="Editar plano alimentar" />
@@ -69,6 +70,7 @@ export default function EditorPlano() {
         <Txt v="sub">Preencha as refeições ou importe um PDF de até 8 MB. O plano passa a valer a partir de hoje.</Txt>
         <Button variant="secondary" icon="upload" label={lendo ? 'Aguardando leitura…' : 'Importar PDF com Gemini'} disabled={lendo} onPress={importar} />
         {!!aviso && <Txt accessibilityLiveRegion="polite" style={{ color: colors.accent }}>{aviso}</Txt>}
+        <Button small variant="ghost" label="Configurar servidor de IA" onPress={() => router.push('/servidor-ia')} />
       </Card>
       {plano.refeicoes.map((r, i) => <Card key={r.id} style={{ gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

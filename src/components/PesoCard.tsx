@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { confirm } from '@/lib/platform';
-import { dayKey, formatKg } from '@/lib/workout';
+import { formatKg } from '@/lib/workout';
+import { dataLocal } from '@/lib/datas';
 import { useStore } from '@/store';
 import { colors, fonts } from '@/theme';
 import { Icon } from './Icon';
@@ -17,7 +18,7 @@ export function PesoCard() {
   const ultimo = pesos.at(-1);
   const [kg, setKg] = useState(ultimo?.kg ?? 0);
   const [lista, setLista] = useState(false);
-  const hojeFeito = ultimo && dayKey(ultimo.t) === dayKey(agora);
+  const hojeFeito = ultimo && dataLocal(ultimo.t) === dataLocal(agora);
   // Comparação com o registro mais próximo de 30 dias atrás (ou o primeiro, se ainda não tem 30 dias).
   const base = pesos.filter((p) => p.t <= agora - 30 * DIA).at(-1) ?? (pesos.length > 1 ? pesos[0] : undefined);
   const diff = ultimo && base && base !== ultimo ? Math.round((ultimo.kg - base.kg) * 10) / 10 : undefined;

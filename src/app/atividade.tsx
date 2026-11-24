@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { modalidadesLuta } from '@/data/catalog';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, ExerciseImage, NumberInput, ScreenHeader, Txt } from '@/components/ui';
+import { Button, ExerciseImage, NumberInput, Opcoes, ScreenHeader, Txt } from '@/components/ui';
+import { voltar } from '@/lib/navegacao';
 import type { Intensidade } from '@/lib/types';
 import { newActivity, pace } from '@/lib/workout';
 import { useStore } from '@/store';
@@ -13,32 +13,6 @@ import { colors, fonts, radius } from '@/theme';
 const ATIVIDADES = ['Corrida', 'Caminhada', 'Bicicleta', 'Natação', 'Futebol', 'Treino em casa', 'Luta', 'Dança', 'Yoga', 'Trilha'];
 const INTENSIDADES: Intensidade[] = ['leve', 'moderada', 'forte'];
 const DIAS = ['Hoje', 'Ontem', 'Anteontem', 'Há 3 dias', 'Há 4 dias', 'Há 5 dias', 'Há 6 dias'];
-
-function Chips<T extends string | number>({ options, value, onChange, label }: {
-  options: readonly { value: T; label: string }[];
-  value: T | undefined;
-  onChange: (v: T) => void;
-  label: string;
-}) {
-  return (
-    <View style={s.chips} accessibilityLabel={label}>
-      {options.map((o) => {
-        const on = o.value === value;
-        return (
-          <Pressable
-            key={String(o.value)}
-            onPress={() => onChange(o.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: on }}
-            style={({ pressed }) => [s.chip, on && s.chipOn, pressed && { opacity: 0.7 }]}
-          >
-            <Txt style={[s.chipText, on && { color: colors.onAccent }]}>{o.label}</Txt>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
 
 /** Registro avulso: corrida, futebol, treino em casa sem ficha… Só duração é obrigatória. */
 export default function Atividade() {
@@ -61,8 +35,7 @@ export default function Atividade() {
     // Hoje: terminou agora. Dias anteriores: fica no mesmo horário daquele dia.
     const fim = Date.now() - dia * 86_400_000;
     addSession(newActivity({ nome: titulo, inicio: fim - minutos * 60_000, minutos, metros: nome === 'Luta' ? undefined : Math.round(km * 1000), intensidade, nota }));
-    if (router.canGoBack()) router.back();
-    else router.replace('/');
+    voltar();
   };
 
   return (
@@ -71,11 +44,11 @@ export default function Atividade() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottom + 32 }]} keyboardShouldPersistTaps="handled">
         <Txt v="label">O que você fez</Txt>
-        <Chips label="Atividade" value={nome} onChange={setNome} options={[...ATIVIDADES, 'Outra'].map((a) => ({ value: a, label: a }))} />
+        <Opcoes sobreFundo grande label="Atividade" value={nome} onChange={setNome} options={[...ATIVIDADES, 'Outra'].map((a) => [a, a] as const)} />
         {nome === 'Luta' && <>
           <Txt v="label">Modalidade</Txt>
-          <Chips label="Modalidade de luta" value={modalidade} onChange={setModalidade}
-            options={modalidadesLuta.map(([key, item]) => ({ value: key, label: item.name }))} />
+          <Opcoes sobreFundo grande label="Modalidade de luta" value={modalidade} onChange={setModalidade}
+            options={modalidadesLuta.map(([key, item]) => [key, item.name] as const)} />
           {luta && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <ExerciseImage catalogKey={luta[0]} name={luta[1].name} size={60} />
             <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://github.com/Antonio-byte10/forja/blob/main/assets/exercises/CREDITOS-LUTAS.md')}>
@@ -107,10 +80,10 @@ export default function Atividade() {
         {nome !== 'Luta' && <Txt v="sub">{ritmo ? `Ritmo: ${ritmo} min/km` : 'A distância é opcional. Com ela, o app calcula o ritmo.'}</Txt>}
 
         <Txt v="label" style={s.gap}>Intensidade</Txt>
-        <Chips label="Intensidade" value={intensidade} onChange={setIntensidade} options={INTENSIDADES.map((i) => ({ value: i, label: i[0].toUpperCase() + i.slice(1) }))} />
+        <Opcoes sobreFundo grande label="Intensidade" value={intensidade} onChange={setIntensidade} options={INTENSIDADES.map((i) => [i, i[0].toUpperCase() + i.slice(1)] as const)} />
 
         <Txt v="label" style={s.gap}>Quando</Txt>
-        <Chips label="Dia" value={dia} onChange={setDia} options={DIAS.map((d, i) => ({ value: i, label: d }))} />
+        <Opcoes sobreFundo grande label="Dia" value={dia} onChange={setDia} options={DIAS.map((d, i) => [i, d] as const)} />
 
         <Txt v="label" style={s.gap}>Anotação (opcional)</Txt>
         <TextInput
@@ -133,10 +106,6 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: 16, gap: 10 },
   gap: { marginTop: 12 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { height: 40, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.surface, justifyContent: 'center' },
-  chipOn: { backgroundColor: colors.accent },
-  chipText: { fontFamily: fonts.semibold, fontSize: 14 },
   numbers: { flexDirection: 'row', gap: 12, marginTop: 12 },
   field: { flex: 1, gap: 6 },
   number: { height: 56, fontSize: 28 },

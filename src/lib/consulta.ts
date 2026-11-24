@@ -1,5 +1,6 @@
-import { dataLocal, planoEm, refeicoesEm, type Nutricao } from './nutricao';
+import { planoEm, refeicoesEm, type Nutricao } from './nutricao';
 import type { Peso } from './types';
+import { dataLocal } from './datas';
 
 export const br = (d: string) => d.split('-').reverse().join('/');
 export function lerDataBR(v: string) {

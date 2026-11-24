@@ -31,6 +31,12 @@ export default function RootLayout() {
         <Stack.Screen name="exercicio/[key]" />
         <Stack.Screen name="editar/[id]" />
         <Stack.Screen name="fotos" />
+        <Stack.Screen name="planejamento" />
+        <Stack.Screen name="perfil" />
+        <Stack.Screen name="servidor-ia" />
+        <Stack.Screen name="plano-alimentar" />
+        <Stack.Screen name="consulta" />
+        <Stack.Screen name="diario/[data]" />
       </Stack>
     </>
   );

@@ -2,10 +2,10 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { Session } from '@/lib/types';
-import { dataLocal } from '@/lib/nutricao';
 import { useStore } from '@/store';
 import { colors, fonts } from '@/theme';
 import { Card, IconButton, Txt } from './ui';
+import { dataLocal } from '@/lib/datas';
 
 const WEEK = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 

@@ -1,3 +1,5 @@
+import { dataValida, meioDia } from './datas';
+
 export type Refeicao = {
   id: string;
   nome: string;
@@ -17,12 +19,6 @@ export type Registro = {
 };
 export type Nutricao = { planos: Record<string, PlanoAlimentar>; diario: Record<string, Registro> };
 
-export const dataLocal = (t: Date | number) => {
-  const d = new Date(t);
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-};
-export const meioDia = (dia: string) => new Date(dia + 'T12:00:00');
-export const dataValida = (dia: string) => /^\d{4}-\d{2}-\d{2}$/.test(dia) && dataLocal(meioDia(dia)) === dia;
 export const planoEm = (planos: Nutricao['planos'], dia: string) => {
   const inicio = Object.keys(planos).filter((d) => d <= dia).sort().at(-1);
   return inicio ? planos[inicio] : undefined;

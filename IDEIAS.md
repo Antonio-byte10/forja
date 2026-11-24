@@ -1,102 +1,47 @@
-# Mapeamento de novas inserções
+# Forja · estado do app e próximas entregas
 
-_12/11/2026 — feito a partir do código atual (v1.0.0). Nada foi alterado no app._
+Revisão de 21 de novembro de 2026 sobre a versão 1.3.0. O aplicativo funciona sem conta. O treino em andamento é gravado separadamente das fichas, do histórico e do diário. O serviço local de importação de PDF é opcional.
 
-> **19/11/2026 (v1.2.0):** feitos 1.1–1.4, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.8, 2.9, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.4,
-> 5.1, 5.2 e 5.3. Ainda faltam: 1.5 (fotos em WebP), 2.7 (tipo de série), 2.10 (bi-set), 4.3 (exercício com foto) e 4.5 (deload).
->
-> **v1.2 (Forja):** também entraram 3.6 (peso corporal), fotos de progresso com antes/depois, passos do dia pelo
-> Health Connect e sequência de semanas batendo a meta.
+## O que já está disponível
 
-Esforço: **P** = algumas horas · **M** = um dia · **G** = mais de um dia.
-"Lib nova" = precisa adicionar uma biblioteca e gerar um APK novo (tudo continua local, sem nuvem).
+| Área | O que a pessoa consegue fazer hoje |
+|---|---|
+| Treino | Alternar fichas de academia ou casa, duplicar fichas, fazer treino livre e registrar atividades. O catálogo traz 254 exercícios. Durante a sessão é possível trocar a ordem, substituir exercícios, anotar, cronometrar e usar a última carga como referência. |
+| Histórico e progresso | Retomar o treino, concluir com resumo, editar a sessão salva e consultar gráficos por exercício, séries por grupo muscular, peso, metas semanais e fotos comparativas. |
+| Nutrição e diário | Montar o plano manualmente ou revisar um PDF importado com Gemini, escolher alternativas e consultar a versão do plano que valia em cada data. Há registro de refeições, peso, altura, cintura, sono, disposição e notas. |
+| Consulta | Selecionar um período e preparar um relatório para o nutricionista. A pessoa escolhe quais fotos e notas incluir. |
+| Dados e integrações | Exportar e restaurar fichas, histórico, peso e nutrição em JSON. Exportar histórico em CSV. Fotos são compartilhadas separadamente. Passos e leitura automática de sono dependem do Health Connect no Android. |
 
----
+## Verificação local em 21/11/2026
 
-## 1. Desempenho e segurança dos dados (antes de o histórico crescer)
+No Edge, em uma janela de 390 × 844 com dados fictícios, uma série de 40 kg × 10 repetições sobreviveu ao recarregamento. Cancelar a finalização manteve a sessão aberta. Confirmar mostrou 400 kg no resumo e gerou uma única sessão no backup. Finalizar um treino livre vazio preservou essa contagem.
 
-Hoje está rápido porque o histórico é pequeno. Estes pontos pesam com o tempo:
+O teste também cadastrou uma refeição manualmente, marcou seu consumo, registrou peso e nota e abriu a prévia para consulta. A refeição apareceu no relatório e a nota ficou privada por padrão. Um perfil vazio restaurou o JSON, preservou o ID da sessão, as medidas e o diário após recarregar, e exportou o CSV.
 
-| # | O quê | Por quê | Esforço |
-|---|---|---|---|
-| 1.1 | **Salvar só o que mudou** | A cada número digitado no treino, o app regrava *todo* o histórico no celular (`src/store.ts`). Com ~1 ano de treinos são centenas de KB por toque de tecla. Separar o treino em andamento do histórico resolve. | M |
-| 1.2 | **Calcular "Última" uma vez só** | Cada cartão de exercício varre o histórico inteiro a cada toque (`lastSets` em `treino.tsx`). Dá para calcular no início do treino e guardar. | P |
-| 1.3 | **Telas atualizam só o necessário** | As telas leem o estado inteiro (`useStore()`), então qualquer mudança redesenha tudo. Ler só o que cada tela usa. | P |
-| 1.4 | **Versão nos dados salvos** | Se um dia mudarmos o formato (ex.: série de aquecimento, anotações), sem versão o app antigo pode perder dados. Adicionar `version` + migração. Fazer **antes** de qualquer item que mude o formato. | P |
-| 1.5 | **Fotos menores** | As 155 fotos ocupam 6,5 MB. Em WebP ficam ~2–3 MB → APK menor e abre mais rápido. | P |
-| 1.6 | **Histórico com cálculo repetido** | A tela de histórico compara cada treino com o anterior procurando na lista toda (cresce ao quadrado). Pré-calcular uma vez. | P |
+Passaram os 67 testes automatizados, lint, TypeScript, as 20 verificações do Expo Doctor e a exportação dos bundles Android e iOS. O teste do serviço Gemini usou respostas simuladas. Câmera, Health Connect, notificações com tela bloqueada e compartilhamento nativo aguardam teste em aparelho. O npm audit encontrou um aviso moderado em minimatch, propagado para oito entradas na árvore do Expo e do ESLint. A correção automática proposta para o Expo retrocede ao SDK 52.
 
-## 2. Durante o treino (na academia)
+## Planejamento e painel pessoal na versão local
 
-| # | O quê | Por quê | Esforço |
-|---|---|---|---|
-| 2.1 | **Tela sempre acesa no treino** | A tela apaga entre séries e o cronômetro some da vista. | P · lib nova |
-| 2.2 | **Aviso de fim do descanso com tela bloqueada** | Hoje a vibração só funciona com o app aberto. Notificação local avisa mesmo com o celular no bolso. | M · lib nova |
-| 2.3 | **Descanso por exercício** | Hoje é 90 s fixo para tudo. Ex.: 2–3 min no agachamento, 60 s no isolador. Campo na ficha. | P |
-| 2.4 | **Sugestão de carga ("progressão dupla")** | Se bateu todas as reps da última vez, sugere +2,5 kg (ou +1 kg/lado). Mostra um ↑ ao lado da carga. | M |
-| 2.5 | **Trocar exercício no meio do treino** | Aparelho ocupado → trocar por outro do mesmo grupo sem mexer na ficha. | M |
-| 2.6 | **Reordenar exercícios no treino** | Mesmo motivo: fazer fora da ordem da ficha. | P |
-| 2.7 | **Tipo de série** (aquecimento / normal / drop) | Aquecimento não deveria contar no volume nem virar a "Última". | M · muda formato (ver 1.4) |
-| 2.8 | **Anotação rápida** por exercício | "Banco na posição 4", "doeu o ombro". Aparece no próximo treino. | P · muda formato |
-| 2.9 | **Calculadora de anilhas** | Toca na carga → mostra que anilhas pôr de cada lado da barra. | P |
-| 2.10 | **Bi-set / superset** | Agrupar 2 exercícios alternados; o descanso só começa depois do par. | G |
+Em Início, a agenda semanal permite escolher uma ficha por dia e remarcar para uma data livre. A ficha de hoje aparece no cartão de início e ganha o estado concluído ao salvar o treino correspondente. Em Progresso, o painel cobre os últimos sete dias, com minutos de treino por dia, sessões, refeições e média de sono. Cada barra abre o diário da data.
 
-## 3. Progresso e análise
+O perfil opcional estima o gasto energético diário de adultos a partir das medidas e da atividade habitual informadas. O painel também oferece uma mensagem local e uma mensagem opcional do Gemini baseada apenas na contagem de dias com treino. Agenda e perfil acompanham o backup JSON.
 
-| # | O quê | Por quê | Esforço |
-|---|---|---|---|
-| 3.1 | **Recordes pessoais (PR)** | Maior carga, mais reps e 1RM estimado por exercício. Selo "🏆 Recorde" no treino e no histórico. | M |
-| 3.2 | **Gráfico de evolução por exercício** | Carga / 1RM estimado ao longo do tempo. O `react-native-svg` já está no projeto, não precisa lib nova. | M |
-| 3.3 | **Volume semanal por grupo muscular** | O catálogo já sabe o grupo de cada exercício. Mostra séries/semana de Peito, Costas etc. e onde está fraco. | M |
-| 3.4 | **Resumo ao finalizar** | Tela de fim com volume, tempo, recordes batidos e comparação com a última vez. | P |
-| 3.5 | **Sequência (streak) e meta semanal** | "3 de 4 treinos nesta semana". Já existe a faixa da semana; só falta a meta. | P |
-| 3.6 | **Peso corporal** | Registro simples + gráfico. Útil também para barra fixa/paralelas. | M · muda formato |
+## Próximas funcionalidades
 
-## 4. Fichas e planejamento
+| Ordem | Entrega | Primeira versão que dá para testar |
+|---|---|---|
+| 1 | Treino curto para dias corridos | Marcar os exercícios prioritários de uma ficha e abrir sua versão curta. Antes de começar, ver o que entrou e o que ficou de fora. A ficha completa continua disponível para a próxima sessão. |
+| 2 | Perfil de equipamentos | Salvar o que há em casa ou na academia. Ao substituir um exercício, oferecer primeiro os do mesmo grupo que usam os equipamentos disponíveis. Começar pelas fichas padrão e indicar exercícios ainda sem classificação. |
+| 3 | Lista de compras do plano | Reunir as refeições dos dias escolhidos, permitir selecionar alternativas e riscar itens. Começar com uma lista editável. Para somar quantidades, o plano precisará distinguir ingrediente, quantidade e unidade. |
 
-| # | O quê | Por quê | Esforço |
-|---|---|---|---|
-| 4.1 | **Faixa de reps** (8–12 em vez de 10) | Base para a sugestão de carga (2.4). | P · muda formato |
-| 4.2 | **Duplicar ficha** | Criar variação de uma ficha sem montar do zero. | P |
-| 4.3 | **Exercício próprio com foto** | Criar exercício fora do catálogo e tirar foto do aparelho. | M · lib nova (câmera) |
-| 4.4 | **Editar treino já salvo** | Corrigir uma carga digitada errado no histórico. | M |
-| 4.5 | **Semana de deload** | Botão que inicia o treino com −40% de carga, sem afetar a "Última". | P |
+Outras ideias do levantamento anterior continuam disponíveis para uma rodada posterior: tipo e esforço da série, bi-set com descanso após o par, semana de carga reduzida, exercício próprio com foto, braço e coxa no diário, backup local com fotos, tema claro e widget Android. A cintura já está no diário. Para otimizar as imagens, medir tamanho e tempo de carregamento antes de decidir por WebP. O protótipo e as fontes do catálogo estão no [mapeamento de exercícios](proxima-versao/MAPEAMENTO.md).
 
-## 5. Dados e backup
+## Supabase depois da experiência local
 
-| # | O quê | Por quê | Esforço |
-|---|---|---|---|
-| 5.1 | **Backup como arquivo** | Hoje é copiar/colar texto; com histórico grande, colar falha ou corta. Gerar `.json` e mandar pelo WhatsApp/Drive pelo menu de compartilhar do Android. | M · lib nova |
-| 5.2 | **Lembrete de backup** | "Último backup há 30 dias" na tela inicial. | P |
-| 5.3 | **Exportar CSV** | Abrir o histórico no Excel/Planilhas. | P |
+| Etapa | Modelo proposto | Critério de aceite |
+|---|---|---|
+| 1. Recuperar ao trocar de celular | A pessoa ativa uma conta e solicita uma cópia. Guardar o JSON atual em um bucket privado e em uma tabela de backups registrar dono, caminho, data, versão do formato e tamanho. Oferecer prévia com data e contagens antes de restaurar. | Um aparelho limpo recupera fichas, sessões, medidas e diário. Uma segunda conta fica sem acesso ao arquivo tanto pela tabela quanto pelo armazenamento. |
+| 2. Incluir fotos por escolha | Enviar os arquivos escolhidos ao Storage e guardar em uma tabela o dono, a chave do arquivo, a data e o vínculo opcional com o treino. A URI local serve somente no aparelho de origem. | Em outro aparelho, as fotos escolhidas abrem no dia correto. Uma transferência interrompida pode ser retomada sem gerar fotos duplicadas. |
+| 3. Sincronizar dois aparelhos | Começar por fichas e sessões. Identificar cada registro pelo dono e pelo ID estável, acomodando os IDs de texto já existentes. Registrar versão e exclusões. Uma fila local reenvia a operação ao reconectar, com um identificador único por alteração. | Registrar treino offline, reconectar duas vezes e obter uma única sessão. Se dois aparelhos editarem a mesma ficha, preservar as duas alterações para resolução explícita. Uma exclusão confirmada continua valendo quando o outro aparelho volta. |
 
----
-
-## Por onde eu começaria
-
-1. **1.4 + 1.1 + 1.2 + 1.3** — um pacote só de "fundação": mantém o app rápido daqui a um ano e deixa o formato pronto para crescer.
-2. **2.1 Tela acesa** e **2.3 Descanso por exercício** — pequenos e você sente na hora na academia.
-3. **3.1 Recordes + 3.2 Gráfico** — a parte mais motivadora que falta hoje.
-4. **2.4 Sugestão de carga** (com **4.1 Faixa de reps**) — transforma o app de "anotar" em "orientar".
-5. **5.1 Backup em arquivo** — antes de o histórico ficar grande demais para copiar e colar.
-
----
-
-Próxima versão (treino em casa, peso do corpo, corrida, atividades): ver [proxima-versao/MAPEAMENTO.md](proxima-versao/MAPEAMENTO.md).
-
-## 6. Próximas ideias (depois da v1.2)
-
-| # | O quê | Por quê | Esforço |
-|---|---|---|---|
-| 6.1 | **Calorias e minutos ativos do Health Connect** | Já temos a conexão; ler `ActiveCaloriesBurned` e `ExerciseSession` é pouco código. | P |
-| 6.2 | **Gravar o treino no Health Connect** | O treino do Forja aparece no Samsung Health / Google Fit. | M |
-| 6.3 | **Medidas do corpo** (braço, cintura, coxa) | Complementa peso e fotos, que nem sempre mostram a mudança. | P |
-| 6.4 | **RPE / esforço por série** | Saber se a série foi leve ou no limite ajuda a decidir a carga. | P · muda formato |
-| 6.5 | **Widget na tela inicial do Android** | Próxima ficha e passos sem abrir o app. | G · lib nova |
-| 6.6 | **Fotos no backup** (arquivo .zip) | Hoje as fotos só saem uma a uma pelo compartilhar. | M · lib nova |
-| 6.7 | **Tema claro** | Treinar ao ar livre com sol forte. | M |
-| 6.8 | **Releases no GitHub com o APK** | Outras pessoas instalam sem compilar. | P |
-
-## 7. Nutrição e bem-estar na versão 1.3
-
-O Diário registra a alternativa consumida por refeição, horas de sono e disposição. No Android, a pessoa também pode autorizar a leitura de sono via Health Connect. O calendário permite escolher um período para gerar o resumo da consulta com notas e fotos opcionais. Durante a revisão de um plano importado, a refeição abre a página correspondente do PDF.
+Aplicar políticas por proprietário nas tabelas e nos objetos privados. Liberar ao app apenas as operações necessárias. Validar leitura, alteração e exclusão com duas contas de teste. Sono, medidas e fotos entram na nuvem conforme as opções mostradas à pessoa. [Políticas de acesso por linha](https://supabase.com/docs/guides/database/postgres/row-level-security) · [Buckets privados](https://supabase.com/docs/guides/storage/buckets/fundamentals)

@@ -74,7 +74,8 @@
             "minSdkVersion": 26
           }
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "description": "Treino, nutrição e diário no seu celular. Dados locais e importação opcional com Gemini."
   }

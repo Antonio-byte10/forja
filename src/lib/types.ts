@@ -1,4 +1,5 @@
 import type { Nutricao } from './nutricao';
+import type { Agenda, Perfil } from './semana';
 
 /**
  * Como o exercício é medido:
@@ -73,7 +74,11 @@ export type Peso = { t: number; kg: number };
 /** Foto de progresso. O arquivo fica na pasta do app; `sessionId` liga a foto ao treino do dia. */
 export type Foto = { id: string; t: number; uri: string; sessionId?: string };
 
-export type Backup = { plans: Plan[]; history: Session[]; pesos?: Peso[]; nutricao?: Nutricao };
+export type Backup = { plans: Plan[]; history: Session[]; pesos?: Peso[]; nutricao?: Nutricao; agenda?: Agenda; perfil?: Perfil | null };
 
 /** Preferências que não fazem parte do backup. */
-export type Ajustes = { metaSemanal: number; ultimoBackup?: number; metaPassos: number; passos?: boolean; conectarSono?: boolean };
+export type Ajustes = {
+  metaSemanal: number; ultimoBackup?: number; metaPassos: number; passos?: boolean; conectarSono?: boolean;
+  /** Servidor de IA (Render ou `npm run ia`). Fica só no aparelho: não entra no backup. */
+  servidorIa?: string; codigoIa?: string;
+};

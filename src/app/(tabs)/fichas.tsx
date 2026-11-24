@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
-import { Button, ExerciseImage, Txt } from '@/components/ui';
+import { Button, ExerciseImage, LetraFicha, Txt } from '@/components/ui';
+import { seriesPlanejadas } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors, fonts, radius } from '@/theme';
 
@@ -18,7 +19,7 @@ export default function Fichas() {
       </View>
 
       {plans.map((plan) => {
-        const sets = plan.exercises.reduce((n, e) => n + e.sets, 0);
+        const sets = seriesPlanejadas(plan);
         return (
           <Pressable
             key={plan.id}
@@ -28,9 +29,7 @@ export default function Fichas() {
             style={({ pressed }) => [s.card, pressed && s.pressed]}
           >
             <View style={s.top}>
-              <View style={s.letter}>
-                <Txt style={s.letterText}>{plan.name}</Txt>
-              </View>
+              <LetraFicha letra={plan.name} size={52} suave />
               <View style={{ flex: 1 }}>
                 <Txt v="h2" numberOfLines={1}>{plan.title || 'Sem nome'}</Txt>
                 <Txt v="sub">
@@ -67,8 +66,6 @@ const s = StyleSheet.create({
   pressed: { opacity: 0.7 },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, gap: 14 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  letter: { width: 52, height: 52, borderRadius: 14, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  letterText: { fontFamily: fonts.displayHeavy, fontSize: 32, lineHeight: 38, color: colors.accent },
   thumbs: { flexDirection: 'row', gap: 6 },
   more: { width: 40, height: 40, borderRadius: 8, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
   moreText: { fontFamily: fonts.display, fontSize: 16, color: colors.sub },

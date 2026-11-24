@@ -1,10 +1,11 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExercisePicker } from '@/components/ExercisePicker';
-import { Button, Card, ExerciseImage, IconButton, NumberInput, ScreenHeader, Stepper, Txt } from '@/components/ui';
+import { Button, Card, ExerciseImage, IconButton, NumberInput, Opcoes, ScreenHeader, Stepper, Txt } from '@/components/ui';
 import { confirm } from '@/lib/platform';
+import { voltar } from '@/lib/navegacao';
 import type { Lugar, Medida, Plan, PlanExercise } from '@/lib/types';
 import { medidaDe, porTempo, uid } from '@/lib/workout';
 import { useStore } from '@/store';
@@ -22,24 +23,6 @@ const descansos = (atual: number): [string, string][] =>
   DESCANSOS.some(([v]) => Number(v) === atual) ? DESCANSOS : [...DESCANSOS, [String(atual), `${atual} s`]];
 /** Topo da faixa de repetições: "Fixo" ou até +2, +4, +6 acima do mínimo. */
 const faixas = (reps: number): [string, string][] => [['0', 'Fixo'], ...[2, 4, 6].map((d): [string, string] => [String(reps + d), `${reps}–${reps + d}`])];
-
-function Opcoes<T extends string>({ options, value, onChange, label }: { options: [T, string][]; value: T; onChange: (v: T) => void; label: string }) {
-  return (
-    <View style={s.opcoes} accessibilityLabel={label}>
-      {options.map(([v, texto]) => (
-        <Pressable
-          key={v}
-          onPress={() => onChange(v)}
-          accessibilityRole="button"
-          accessibilityState={{ selected: v === value }}
-          style={({ pressed }) => [s.opcao, v === value && s.opcaoOn, pressed && { opacity: 0.7 }]}
-        >
-          <Txt style={[s.opcaoTexto, v === value && { color: colors.onAccent }]}>{texto}</Txt>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
 
 export default function EditarFicha() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -63,10 +46,7 @@ export default function EditarFicha() {
       return next;
     });
 
-  const back = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/');
-  };
+  const back = () => voltar('/fichas');
 
   /** Ficha pronta para salvar: anotação vazia some e a faixa de reps só fica se for acima do mínimo. */
   const limpa = (p: Plan): Plan => ({
@@ -294,8 +274,4 @@ const s = StyleSheet.create({
     backgroundColor: colors.raised, color: colors.text, borderRadius: radius.sm, height: 42, paddingHorizontal: 12,
     fontFamily: fonts.body, fontSize: 14,
   },
-  opcoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  opcao: { height: 34, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.raised, justifyContent: 'center' },
-  opcaoOn: { backgroundColor: colors.accent },
-  opcaoTexto: { fontFamily: fonts.semibold, fontSize: 13 },
 });

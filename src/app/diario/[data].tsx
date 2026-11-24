@@ -3,11 +3,11 @@ import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Diario } from '@/components/Diario';
 import { Card, ScreenHeader, Txt } from '@/components/ui';
-import { dataLocal, dataValida, meioDia } from '@/lib/nutricao';
 import { useNow } from '@/lib/platform';
 import { sessionMinutes } from '@/lib/workout';
 import { useStore } from '@/store';
 import { colors } from '@/theme';
+import { dataLocal, dataValida, meioDia } from '@/lib/datas';
 
 export default function RegistroDoDia() {
   const { data } = useLocalSearchParams<{ data: string }>();

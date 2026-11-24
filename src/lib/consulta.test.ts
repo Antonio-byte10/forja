@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { htmlConsulta, resumoConsulta } from './consulta';
-import { atualizarRegistro, lerNutricao, meioDia, type Nutricao } from './nutricao';
+import { atualizarRegistro, lerNutricao, type Nutricao } from './nutricao';
+import { meioDia } from './datas';
 
 const dia = '2026-11-20';
 const dados: Nutricao = { planos: { [dia]: { orientacoes: '', refeicoes: [{

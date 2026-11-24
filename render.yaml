@@ -1,0 +1,20 @@
+# Servidor de IA do Forja no Render (opcional). Nenhum segredo fica no repositório:
+# GEMINI_API_KEY é pedida no painel do Render e FORJA_TOKEN é gerado por ele.
+services:
+  - type: web
+    name: forja-ia
+    runtime: node
+    plan: free
+    # O servidor só usa módulos do Node: não precisa instalar as dependências do app.
+    buildCommand: node --version
+    startCommand: node scripts/servidor-ia.mjs
+    healthCheckPath: /saude
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: FORJA_TOKEN
+        generateValue: true
